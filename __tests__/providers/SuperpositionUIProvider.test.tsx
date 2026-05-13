@@ -212,6 +212,7 @@ describe("SuperpositionUIProvider", () => {
               },
             },
             table: {
+              opacity: "0.94",
               header: {
                 bgColor: "#eef2ff",
                 textColor: "#1e293b",
@@ -219,6 +220,7 @@ describe("SuperpositionUIProvider", () => {
                 fontWeight: "800",
                 padding: "12px 16px",
                 textTransform: "uppercase",
+                opacity: "0.88",
               },
             },
             form: {
@@ -246,6 +248,20 @@ describe("SuperpositionUIProvider", () => {
               borderColor: "#dbe3ef",
               borderRadius: "12px",
               placeholderColor: "#94a3b8",
+              placeholderOpacity: "0.72",
+              opacity: "0.96",
+              hoverBgColor: "#f8fafc",
+              hoverBorderColor: "#94a3b8",
+              hoverTextColor: "#0f172a",
+              hoverIconColor: "#334155",
+              hoverShadow: "0 4px 12px rgba(15, 23, 42, 0.08)",
+              focusBgColor: "#ffffff",
+              focusBorderColor: "#2563eb",
+              focusTextColor: "#111827",
+              focusIconColor: "#2563eb",
+              focusShadow: "0 0 0 3px rgba(37, 99, 235, 0.16)",
+              focusOutline: "2px solid #bfdbfe",
+              focusOutlineOffset: "1px",
               icon: { size: "19px", color: "#64748b" },
             },
             pageTitle: {
@@ -293,11 +309,13 @@ describe("SuperpositionUIProvider", () => {
     expect(themeRoot.style.getPropertyValue("--sp-button-secondary-bg")).toBe("#f8fafc");
     expect(themeRoot.style.getPropertyValue("--sp-button-padding")).toBe("11px 17px");
     expect(themeRoot.style.getPropertyValue("--sp-button-radius")).toBe("10px");
+    expect(themeRoot.style.getPropertyValue("--sp-table-opacity")).toBe("0.94");
     expect(themeRoot.style.getPropertyValue("--sp-table-header-bg")).toBe("#eef2ff");
     expect(themeRoot.style.getPropertyValue("--sp-table-header-text")).toBe("#1e293b");
     expect(themeRoot.style.getPropertyValue("--sp-table-header-text-transform")).toBe(
       "uppercase",
     );
+    expect(themeRoot.style.getPropertyValue("--sp-table-header-opacity")).toBe("0.88");
     expect(themeRoot.style.getPropertyValue("--sp-form-label-color")).toBe("#1e293b");
     expect(themeRoot.style.getPropertyValue("--sp-form-helper-color")).toBe("#64748b");
     expect(themeRoot.style.getPropertyValue("--sp-form-remove-button-bg")).toBe(
@@ -312,6 +330,34 @@ describe("SuperpositionUIProvider", () => {
     expect(themeRoot.style.getPropertyValue("--sp-search-width")).toBe("420px");
     expect(themeRoot.style.getPropertyValue("--sp-search-border")).toBe("#dbe3ef");
     expect(themeRoot.style.getPropertyValue("--sp-search-placeholder")).toBe("#94a3b8");
+    expect(themeRoot.style.getPropertyValue("--sp-search-placeholder-opacity")).toBe(
+      "0.72",
+    );
+    expect(themeRoot.style.getPropertyValue("--sp-search-opacity")).toBe("0.96");
+    expect(themeRoot.style.getPropertyValue("--sp-search-hover-bg")).toBe("#f8fafc");
+    expect(themeRoot.style.getPropertyValue("--sp-search-hover-border")).toBe("#94a3b8");
+    expect(themeRoot.style.getPropertyValue("--sp-search-hover-text")).toBe("#0f172a");
+    expect(themeRoot.style.getPropertyValue("--sp-search-hover-icon-color")).toBe(
+      "#334155",
+    );
+    expect(themeRoot.style.getPropertyValue("--sp-search-hover-shadow")).toBe(
+      "0 4px 12px rgba(15, 23, 42, 0.08)",
+    );
+    expect(themeRoot.style.getPropertyValue("--sp-search-focus-bg")).toBe("#ffffff");
+    expect(themeRoot.style.getPropertyValue("--sp-search-focus-border")).toBe("#2563eb");
+    expect(themeRoot.style.getPropertyValue("--sp-search-focus-text")).toBe("#111827");
+    expect(themeRoot.style.getPropertyValue("--sp-search-focus-icon-color")).toBe(
+      "#2563eb",
+    );
+    expect(themeRoot.style.getPropertyValue("--sp-search-focus-shadow")).toBe(
+      "0 0 0 3px rgba(37, 99, 235, 0.16)",
+    );
+    expect(themeRoot.style.getPropertyValue("--sp-search-focus-outline")).toBe(
+      "2px solid #bfdbfe",
+    );
+    expect(themeRoot.style.getPropertyValue("--sp-search-focus-outline-offset")).toBe(
+      "1px",
+    );
     expect(themeRoot.style.getPropertyValue("--sp-page-title-text")).toBe("#334155");
     expect(themeRoot.style.getPropertyValue("--sp-banner-bg")).toBe("#fff7ed");
     expect(themeRoot.style.getPropertyValue("--sp-toast-bg")).toBe("#ffffff");

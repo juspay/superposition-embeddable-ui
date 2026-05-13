@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { Table } from "../../src/components/Table";
+import { resolveTableSerialNumberProps, Table } from "../../src/components/Table";
 
 interface Row {
   id: string;
@@ -69,5 +69,46 @@ describe("Table", () => {
 
     fireEvent.click(screen.getByText("Alice"));
     expect(onClick).toHaveBeenCalledWith(data[0]);
+  });
+
+  it("renders a serial number column when enabled", () => {
+    render(
+      <Table
+        columns={columns}
+        data={data}
+        keyExtractor={(r) => r.id}
+        showSerialNumber
+        serialNumberHeader="S.No"
+        serialNumberStart={11}
+      />,
+    );
+
+    expect(screen.getByText("S.No")).toBeDefined();
+    expect(screen.getByText("11")).toBeDefined();
+    expect(screen.getByText("12")).toBeDefined();
+  });
+
+  it("resolves serial number options from embeddable config", () => {
+    expect(resolveTableSerialNumberProps({ serialNumber: true }, 21)).toEqual({
+      showSerialNumber: true,
+      serialNumberStart: 21,
+    });
+
+    expect(
+      resolveTableSerialNumberProps({
+        serialNumber: {
+          header: "No.",
+          startAt: 5,
+          width: "72px",
+          align: "right",
+        },
+      }),
+    ).toEqual({
+      showSerialNumber: true,
+      serialNumberHeader: "No.",
+      serialNumberStart: 5,
+      serialNumberWidth: "72px",
+      serialNumberAlign: "right",
+    });
   });
 });

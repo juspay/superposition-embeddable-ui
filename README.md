@@ -87,6 +87,14 @@ The embeddable UI currently uses its own fetch-based REST client. It does not ca
     "defaultConfigPrefix": "checkout.",
     "dimensions": ["region", "tenant"]
   },
+  "table": {
+    "serialNumber": {
+      "enabled": true,
+      "header": "S.No",
+      "width": "72px",
+      "align": "center"
+    }
+  },
   "theme": {
     "mode": "light",
     "colors": {
@@ -102,6 +110,7 @@ The embeddable UI currently uses its own fetch-based REST client. It does not ca
     "spacing": { "sm": "10px", "md": "14px" },
     "typography": { "fontSize": "14px" },
     "table": {
+      "opacity": "0.98",
       "header": { "bgColor": "#f3f4f6", "textColor": "#111827" }
     },
     "button": {
@@ -130,6 +139,10 @@ The embeddable UI currently uses its own fetch-based REST client. It does not ca
       "width": "420px",
       "borderRadius": "12px",
       "placeholderColor": "#9ca3af",
+      "hoverBorderColor": "#6b7280",
+      "focusBorderColor": "#0f766e",
+      "focusShadow": "0 0 0 3px rgba(15, 118, 110, 0.18)",
+      "opacity": "1",
       "icon": { "color": "#6b7280" }
     },
     "pageTitle": {
@@ -254,7 +267,7 @@ and `alertZIndex` let the host control overlay placement and layering.
 Theme values go directly into `config.theme`. The preferred shape groups styles
 by component area, with a shared `SuperpositionStyleConfig` shape for common
 properties such as `padding`, `width`, `height`, `textColor`, `bgColor`,
-`borderColor`, `borderRadius`, `fontSize`, `fontWeight`, and `shadow`.
+`borderColor`, `borderRadius`, `fontSize`, `fontWeight`, `shadow`, and `opacity`.
 The UI turns these values into scoped CSS variables on the `.sp-ui` root, and all
 component styles read from that variable contract.
 
@@ -284,6 +297,7 @@ theme: {
     },
   },
   table: {
+    opacity: "0.98",
     header: {
       bgColor: "#f3f4f6",
       textColor: "#111827",
@@ -304,6 +318,11 @@ theme: {
     width: "420px",
     borderRadius: "12px",
     placeholderColor: "#9ca3af",
+    placeholderOpacity: "0.7",
+    hoverBgColor: "#f9fafb",
+    hoverBorderColor: "#6b7280",
+    focusBorderColor: "#0f766e",
+    focusShadow: "0 0 0 3px rgba(15, 118, 110, 0.18)",
     icon: {
       color: "#6b7280",
     },
@@ -337,16 +356,32 @@ Theme field effects:
 | `shadow.sm`/`shadow.md`                                                 | shell, toast, modal, and tooltip elevation                              |
 | `button`                                                                | shared button sizing, typography, border radius, and disabled opacity   |
 | `button.primary`/`button.secondary`/`button.danger`                     | per-variant button colors and elevation                                 |
-| `table.header`                                                          | table header background, label color, type, spacing, and text transform |
+| `table`/`table.header`                                                  | table opacity plus header background, label color, type, spacing, and text transform |
 | `form.label`/`form.helperTextColor`/`form.removeButton`                 | form labels, helper copy, and override form delete icon button          |
 | `icon.color`/`icon.size`/`icon.lock`                                    | default neutral/action icons and locked-condition icon styling          |
-| `search`/`search.icon`                                                  | search box shape, color, placeholder, and search icon styling           |
+| `search`/`search.icon`                                                  | search box shape, opacity, hover/focus highlight, placeholder, and icon styling |
 | `pageTitle`                                                             | top-level page heading typography and color                             |
 | `banner`                                                                | read-only and fixed-scope banner styling                                |
 | `toast`/`toast.success`/`toast.error`/`toast.warning`/`toast.info`      | toast styling and per-tone colors                                       |
 | `dropdown.control`/`dropdown.menu`/`dropdown.option`                    | structured override form dropdown styling                               |
 | `jsonValue`                                                             | inline and expanded JSON value presentation                             |
 | `tooltip`                                                               | icon button tooltip colors, shape, elevation, and type size             |
+
+Table behavior lives outside theme:
+
+```tsx
+table: {
+  serialNumber: true,
+  // or:
+  serialNumber: {
+    enabled: true,
+    header: "S.No",
+    width: "72px",
+    startAt: 1,
+    align: "center",
+  },
+},
+```
 
 ## React usage
 

@@ -12,7 +12,7 @@ function SearchIcon() {
       viewBox="0 0 20 20"
       width="var(--sp-search-icon-size)"
       height="var(--sp-search-icon-size)"
-      style={{ color: "var(--sp-search-icon-color)", flex: "0 0 auto" }}
+      style={{ color: "var(--sp-search-current-icon-color)", flex: "0 0 auto" }}
     >
       <circle
         cx="8.7"
@@ -41,6 +41,7 @@ export function SearchField({
 }: SearchFieldProps) {
   return (
     <label
+      className="sp-search-field"
       style={{
         width: "var(--sp-search-width)",
         minHeight: "var(--sp-search-height)",
@@ -48,11 +49,12 @@ export function SearchField({
         alignItems: "center",
         gap: "var(--sp-space-sm)",
         padding: "var(--sp-search-padding)",
-        border: "1px solid var(--sp-search-border)",
+        border: "1px solid var(--sp-search-current-border)",
         borderRadius: "var(--sp-search-radius)",
-        background: "var(--sp-search-bg)",
-        color: "var(--sp-search-text)",
-        boxShadow: "var(--sp-search-shadow)",
+        background: "var(--sp-search-current-bg)",
+        color: "var(--sp-search-current-text)",
+        boxShadow: "var(--sp-search-current-shadow)",
+        opacity: "var(--sp-search-opacity)",
       }}
     >
       <SearchIcon />

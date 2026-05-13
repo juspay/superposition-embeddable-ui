@@ -22,6 +22,7 @@ export interface SuperpositionStyleConfig {
   margin?: string;
   width?: string;
   height?: string;
+  opacity?: string;
   textColor?: string;
   bgColor?: string;
   borderColor?: string;
@@ -99,7 +100,32 @@ export interface SuperpositionIconThemeConfig {
 
 export interface SuperpositionSearchThemeConfig extends SuperpositionStyleConfig {
   placeholderColor?: string;
+  placeholderOpacity?: string;
+  hoverBgColor?: string;
+  hoverTextColor?: string;
+  hoverBorderColor?: string;
+  hoverIconColor?: string;
+  hoverShadow?: string;
+  focusBgColor?: string;
+  focusTextColor?: string;
+  focusBorderColor?: string;
+  focusIconColor?: string;
+  focusShadow?: string;
+  focusOutline?: string;
+  focusOutlineOffset?: string;
   icon?: SuperpositionIconThemeConfig;
+}
+
+export interface SuperpositionTableSerialNumberConfig {
+  enabled?: boolean;
+  header?: string;
+  width?: string;
+  startAt?: number;
+  align?: "left" | "center" | "right";
+}
+
+export interface SuperpositionTableConfig {
+  serialNumber?: boolean | SuperpositionTableSerialNumberConfig;
 }
 
 export interface SuperpositionToastThemeConfig extends SuperpositionStyleConfig {
@@ -263,6 +289,7 @@ export interface SuperpositionEmbeddableConfig {
   strict?: boolean;
   features?: SuperpositionFeature[];
   routing?: SuperpositionRoutingConfig;
+  table?: SuperpositionTableConfig;
   theme?: SuperpositionThemeConfig;
   layout?: SuperpositionLayoutConfig;
   ui?: SuperpositionUiAdapters;

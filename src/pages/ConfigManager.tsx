@@ -8,6 +8,7 @@ import {
   JsonViewer,
   Modal,
   Pagination,
+  resolveTableSerialNumberProps,
   SearchField,
   Table,
 } from "../components";
@@ -261,6 +262,10 @@ function ConfigManagerContent({
     showResolvedValues ? (resolvedValues ?? undefined) : undefined,
   );
   const hasRows = rows.length > 0;
+  const serialNumberProps = resolveTableSerialNumberProps(
+    config.table,
+    (page - 1) * pageSize + 1,
+  );
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
@@ -331,6 +336,7 @@ function ConfigManagerContent({
         keyExtractor={(r) => r.key}
         loading={loading}
         emptyMessage="No configs found"
+        {...serialNumberProps}
       />
 
       {data && hasRows && (

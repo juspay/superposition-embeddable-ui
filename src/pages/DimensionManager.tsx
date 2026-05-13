@@ -7,6 +7,7 @@ import {
   inputStyle,
   Modal,
   Pagination,
+  resolveTableSerialNumberProps,
   Table,
 } from "../components";
 import type { Column } from "../components/Table";
@@ -183,6 +184,10 @@ function DimensionManagerContent({
   const totalPages = shouldClientPage
     ? Math.ceil(filteredRows.length / pageSize)
     : (data?.total_pages ?? 0);
+  const serialNumberProps = resolveTableSerialNumberProps(
+    config.table,
+    (page - 1) * pageSize + 1,
+  );
 
   return (
     <div>
@@ -217,6 +222,7 @@ function DimensionManagerContent({
         keyExtractor={(r) => r.dimension}
         loading={loading}
         emptyMessage="No dimensions found"
+        {...serialNumberProps}
       />
 
       {data && totalPages > 1 && (
