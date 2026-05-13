@@ -34,9 +34,41 @@
   box-shadow: none !important;
 }
 
+.sp-ui .sp-search-field {
+  --sp-search-current-bg: var(--sp-search-bg);
+  --sp-search-current-text: var(--sp-search-text);
+  --sp-search-current-border: var(--sp-search-border);
+  --sp-search-current-shadow: var(--sp-search-shadow);
+  --sp-search-current-icon-color: var(--sp-search-icon-color);
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background 180ms ease,
+    color 180ms ease,
+    opacity 180ms ease;
+}
+
+.sp-ui .sp-search-field:hover {
+  --sp-search-current-bg: var(--sp-search-hover-bg);
+  --sp-search-current-text: var(--sp-search-hover-text);
+  --sp-search-current-border: var(--sp-search-hover-border);
+  --sp-search-current-shadow: var(--sp-search-hover-shadow);
+  --sp-search-current-icon-color: var(--sp-search-hover-icon-color);
+}
+
+.sp-ui .sp-search-field:focus-within {
+  --sp-search-current-bg: var(--sp-search-focus-bg);
+  --sp-search-current-text: var(--sp-search-focus-text);
+  --sp-search-current-border: var(--sp-search-focus-border);
+  --sp-search-current-shadow: var(--sp-search-focus-shadow);
+  --sp-search-current-icon-color: var(--sp-search-focus-icon-color);
+  outline: var(--sp-search-focus-outline);
+  outline-offset: var(--sp-search-focus-outline-offset);
+}
+
 .sp-ui .sp-search-input::placeholder {
   color: var(--sp-search-placeholder);
-  opacity: 1;
+  opacity: var(--sp-search-placeholder-opacity);
 }
 
 .sp-ui :where(a) {

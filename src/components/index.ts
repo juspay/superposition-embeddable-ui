@@ -24,7 +24,7 @@ export {
   defaultEntryFromSchema,
 } from "./StructuredContextOverrideForm";
 export type { FieldEntryState } from "./StructuredContextOverrideForm";
-export { Table } from "./Table";
-export type { Column, TableProps } from "./Table";
+export { resolveTableSerialNumberProps, Table } from "./Table";
+export type { Column, TableProps, TableSerialNumberProps } from "./Table";
 export { Tooltip } from "./Tooltip";
 export type { TooltipProps } from "./Tooltip";

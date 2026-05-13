@@ -1,4 +1,5 @@
 import React from "react";
+import type { SuperpositionTableConfig } from "../types";
 
 export interface Column<T> {
   key: string;
@@ -15,6 +16,43 @@ export interface TableProps<T> {
   onRowClick?: (row: T) => void;
   emptyMessage?: string;
   loading?: boolean;
+  showSerialNumber?: boolean;
+  serialNumberHeader?: string;
+  serialNumberStart?: number;
+  serialNumberWidth?: string;
+  serialNumberAlign?: "left" | "center" | "right";
+}
+
+export type TableSerialNumberProps = Pick<
+  TableProps<unknown>,
+  | "showSerialNumber"
+  | "serialNumberHeader"
+  | "serialNumberStart"
+  | "serialNumberWidth"
+  | "serialNumberAlign"
+>;
+
+export function resolveTableSerialNumberProps(
+  tableConfig?: SuperpositionTableConfig,
+  fallbackStartAt = 1,
+): TableSerialNumberProps {
+  const serialNumber = tableConfig?.serialNumber;
+
+  if (!serialNumber) {
+    return { showSerialNumber: false, serialNumberStart: fallbackStartAt };
+  }
+
+  if (serialNumber === true) {
+    return { showSerialNumber: true, serialNumberStart: fallbackStartAt };
+  }
+
+  return {
+    showSerialNumber: serialNumber.enabled ?? true,
+    serialNumberHeader: serialNumber.header,
+    serialNumberStart: serialNumber.startAt ?? fallbackStartAt,
+    serialNumberWidth: serialNumber.width,
+    serialNumberAlign: serialNumber.align,
+  };
 }
 
 const tableStyle: React.CSSProperties = {
@@ -23,6 +61,7 @@ const tableStyle: React.CSSProperties = {
   borderCollapse: "collapse",
   fontSize: "1rem",
   background: "var(--sp-color-panel)",
+  opacity: "var(--sp-table-opacity)",
 };
 
 const thStyle: React.CSSProperties = {
@@ -35,6 +74,7 @@ const thStyle: React.CSSProperties = {
   fontSize: "var(--sp-table-header-font-size)",
   letterSpacing: 0,
   textTransform: "var(--sp-table-header-text-transform)",
+  opacity: "var(--sp-table-header-opacity)",
 };
 
 const tdStyle: React.CSSProperties = {
@@ -69,6 +109,11 @@ export function Table<T>({
   onRowClick,
   emptyMessage = "No data",
   loading = false,
+  showSerialNumber = false,
+  serialNumberHeader = "#",
+  serialNumberStart = 1,
+  serialNumberWidth = "64px",
+  serialNumberAlign = "center",
 }: TableProps<T>) {
   if (loading) {
     return (
@@ -99,6 +144,17 @@ export function Table<T>({
       <table style={tableStyle}>
         <thead>
           <tr>
+            {showSerialNumber && (
+              <th
+                style={{
+                  ...thStyle,
+                  width: serialNumberWidth,
+                  textAlign: serialNumberAlign,
+                }}
+              >
+                {serialNumberHeader}
+              </th>
+            )}
             {columns.map((col) => (
               <th
                 key={col.key}
@@ -113,7 +169,7 @@ export function Table<T>({
           {data.length === 0 ? (
             <tr>
               <td
-                colSpan={columns.length}
+                colSpan={columns.length + (showSerialNumber ? 1 : 0)}
                 style={{
                   ...tdStyle,
                   textAlign: "center",
@@ -126,7 +182,7 @@ export function Table<T>({
               </td>
             </tr>
           ) : (
-            data.map((row) => (
+            data.map((row, index) => (
               <tr
                 key={keyExtractor(row)}
                 onClick={() => onRowClick?.(row)}
@@ -134,6 +190,19 @@ export function Table<T>({
                   cursor: onRowClick ? "pointer" : "default",
                 }}
               >
+                {showSerialNumber && (
+                  <td
+                    style={{
+                      ...tdStyle,
+                      width: serialNumberWidth,
+                      textAlign: serialNumberAlign,
+                      color: "var(--sp-color-muted)",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {serialNumberStart + index}
+                  </td>
+                )}
                 {columns.map((col) => (
                   <td
                     key={col.key}

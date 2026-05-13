@@ -152,6 +152,7 @@ function buildThemeVars(
     "--sp-alert-min-width":
       layout?.alertMinWidth ?? "min(300px, calc(100vw - (var(--sp-space-lg) * 2)))",
     "--sp-table-min-width": layout?.tableMinWidth ?? "720px",
+    "--sp-table-opacity": table?.opacity ?? "1",
     "--sp-compact-control-padding":
       layout?.compactControlPadding ?? "calc(var(--sp-space-xs) / 2) var(--sp-space-xs)",
     "--sp-color-surface-muted":
@@ -177,6 +178,7 @@ function buildThemeVars(
       tableHeader?.textTransform ?? table?.textTransform ?? "none",
     "--sp-table-header-padding":
       tableHeader?.padding ?? table?.padding ?? "var(--sp-space-sm) var(--sp-space-md)",
+    "--sp-table-header-opacity": tableHeader?.opacity ?? "1",
     "--sp-button-primary-bg":
       buttonPrimary?.bgColor ?? button?.bgColor ?? "var(--sp-color-primary)",
     "--sp-button-primary-text":
@@ -236,6 +238,7 @@ function buildThemeVars(
     "--sp-search-bg": search?.bgColor ?? "var(--sp-control-bg)",
     "--sp-search-text": search?.textColor ?? "var(--sp-control-text)",
     "--sp-search-placeholder": search?.placeholderColor ?? "var(--sp-color-muted)",
+    "--sp-search-placeholder-opacity": search?.placeholderOpacity ?? "1",
     "--sp-search-border": search?.borderColor ?? "var(--sp-control-border)",
     "--sp-search-radius": search?.borderRadius ?? "var(--sp-control-radius)",
     "--sp-search-padding": search?.padding ?? "var(--sp-space-sm) var(--sp-space-md)",
@@ -244,8 +247,25 @@ function buildThemeVars(
     "--sp-search-font-size": search?.fontSize ?? "1rem",
     "--sp-search-font-weight": search?.fontWeight ?? "500",
     "--sp-search-shadow": search?.shadow ?? "none",
+    "--sp-search-opacity": search?.opacity ?? "1",
+    "--sp-search-hover-bg": search?.hoverBgColor ?? "var(--sp-search-bg)",
+    "--sp-search-hover-text": search?.hoverTextColor ?? "var(--sp-search-text)",
+    "--sp-search-hover-border": search?.hoverBorderColor ?? "var(--sp-search-border)",
+    "--sp-search-hover-shadow": search?.hoverShadow ?? "var(--sp-search-shadow)",
+    "--sp-search-focus-bg": search?.focusBgColor ?? "var(--sp-search-hover-bg)",
+    "--sp-search-focus-text": search?.focusTextColor ?? "var(--sp-search-hover-text)",
+    "--sp-search-focus-border": search?.focusBorderColor ?? "var(--sp-color-primary)",
+    "--sp-search-focus-shadow":
+      search?.focusShadow ??
+      "0 0 0 3px color-mix(in oklab, var(--sp-color-primary) 18%, transparent)",
+    "--sp-search-focus-outline": search?.focusOutline ?? "none",
+    "--sp-search-focus-outline-offset": search?.focusOutlineOffset ?? "0",
     "--sp-search-icon-size": searchIcon?.size ?? icon?.size ?? "18px",
     "--sp-search-icon-color": searchIcon?.color ?? icon?.color ?? "var(--sp-color-muted)",
+    "--sp-search-hover-icon-color":
+      search?.hoverIconColor ?? "var(--sp-search-icon-color)",
+    "--sp-search-focus-icon-color":
+      search?.focusIconColor ?? "var(--sp-search-hover-icon-color)",
     "--sp-dropdown-width": dropdown?.width ?? "260px",
     "--sp-dropdown-control-bg":
       dropdownControl?.bgColor ?? dropdown?.bgColor ?? "var(--sp-control-bg)",
