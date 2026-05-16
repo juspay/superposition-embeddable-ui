@@ -24,6 +24,17 @@ describe("Modal", () => {
     expect(screen.getByText("Modal content here")).toBeDefined();
   });
 
+  it("renders the close button in the modal header", () => {
+    render(
+      <Modal open={true} onClose={() => {}} title="Test Modal">
+        Modal content here
+      </Modal>,
+    );
+
+    expect(screen.getByRole("dialog", { name: "Test Modal" })).toBeDefined();
+    expect(screen.getByLabelText("Close modal")).toBeDefined();
+  });
+
   it("calls onClose when X button clicked", () => {
     const onClose = vi.fn();
     render(
@@ -32,7 +43,7 @@ describe("Modal", () => {
       </Modal>,
     );
 
-    fireEvent.click(screen.getByLabelText("Close"));
+    fireEvent.click(screen.getByLabelText("Close modal"));
     expect(onClose).toHaveBeenCalledOnce();
   });
 

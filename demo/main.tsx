@@ -1,6 +1,16 @@
+import {
+  Theme as BlendTheme,
+  ThemeProvider as BlendThemeProvider,
+  Button,
+  ButtonSize,
+  ButtonType,
+  FOUNDATION_THEME,
+  type ThemeType as BlendThemeType,
+} from "@juspay/blend-design-system";
 import React, { useEffect, useMemo, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { AlertProvider, SuperpositionAdmin, SuperpositionUIProvider } from "../src/index";
+import "../src/styles.css";
 import type {
   JsonValue,
   SuperpositionEmbeddableConfig,
@@ -28,7 +38,6 @@ interface DemoDraftState {
   features: string;
   allowOverrideContextEditing: boolean;
   scopeJson: string;
-  writeScopeJson: string;
   scopeLocked: boolean;
   strict: boolean;
   themeMode: SuperpositionThemeMode;
@@ -44,13 +53,20 @@ interface DemoDraftState {
 }
 
 interface DemoPersistedState extends DemoDraftState {
+  version?: number;
   feature: SuperpositionFeature;
   connected: boolean;
   activeConnection?: DemoDraftState;
 }
 
 const STORAGE_KEY = "sp-embeddable-demo-config";
+const STORAGE_VERSION = 2;
 const DEFAULT_FEATURE: SuperpositionFeature = "config";
+const BLEND_COLORS = FOUNDATION_THEME.colors;
+const BLEND_FONT = FOUNDATION_THEME.font;
+const BLEND_RADIUS = FOUNDATION_THEME.border.radius;
+const BLEND_SHADOWS = FOUNDATION_THEME.shadows;
+
 const DEFAULT_DRAFT: DemoDraftState = {
   host: "/api",
   orgId: "localorg",
@@ -59,20 +75,77 @@ const DEFAULT_DRAFT: DemoDraftState = {
   features: "",
   allowOverrideContextEditing: false,
   scopeJson: "",
-  writeScopeJson: "",
   scopeLocked: true,
   strict: false,
-  themeMode: "system",
-  themePrimary: "#4f46e5",
-  themeBg: "#f3f4f6",
-  themePanel: "#ffffff",
-  buttonBg: "#7c3aed",
-  buttonText: "#ffffff",
-  iconColor: "#4b5563",
-  searchBorder: "#d1d5db",
-  dropdownSelectedBg: "#f3f4f6",
-  bannerBg: "#fff7ed",
+  themeMode: "light",
+  themePrimary: String(BLEND_COLORS.primary[500]),
+  themeBg: String(BLEND_COLORS.gray[50]),
+  themePanel: String(BLEND_COLORS.gray[0]),
+  buttonBg: String(BLEND_COLORS.primary[500]),
+  buttonText: String(BLEND_COLORS.gray[0]),
+  iconColor: String(BLEND_COLORS.gray[500]),
+  searchBorder: String(BLEND_COLORS.gray[200]),
+  dropdownSelectedBg: String(BLEND_COLORS.gray[50]),
+  bannerBg: String(BLEND_COLORS.yellow[50]),
 };
+
+const demoToolbarStyle: React.CSSProperties = {
+  background: String(BLEND_COLORS.gray[0]),
+  borderBottom: `1px solid ${BLEND_COLORS.gray[200]}`,
+};
+
+const demoChipStyle: React.CSSProperties = {
+  background: String(BLEND_COLORS.primary[50]),
+  borderColor: String(BLEND_COLORS.primary[200]),
+  color: String(BLEND_COLORS.primary[700]),
+};
+
+const demoLabelStyle: React.CSSProperties = {
+  color: String(BLEND_COLORS.gray[700]),
+};
+
+const demoNotesStyle: React.CSSProperties = {
+  background: String(BLEND_COLORS.gray[0]),
+  borderColor: String(BLEND_COLORS.gray[200]),
+  borderRadius: String(BLEND_RADIUS[8]),
+  boxShadow: String(BLEND_SHADOWS.xs),
+};
+
+const demoAppRootStyle: React.CSSProperties = {
+  background: "transparent",
+  border: 0,
+  borderRadius: 0,
+  boxShadow: "none",
+};
+
+function buildDemoFoundationTokens(state: DemoDraftState): BlendThemeType {
+  return {
+    ...FOUNDATION_THEME,
+    colors: {
+      ...FOUNDATION_THEME.colors,
+      gray: {
+        ...FOUNDATION_THEME.colors.gray,
+        0: state.themePanel || FOUNDATION_THEME.colors.gray[0],
+        50: state.themeBg || FOUNDATION_THEME.colors.gray[50],
+        100: state.themeBg || FOUNDATION_THEME.colors.gray[100],
+        150: state.searchBorder || FOUNDATION_THEME.colors.gray[150],
+        200: state.searchBorder || FOUNDATION_THEME.colors.gray[200],
+        400: state.iconColor || FOUNDATION_THEME.colors.gray[400],
+        500: state.iconColor || FOUNDATION_THEME.colors.gray[500],
+      },
+      primary: {
+        ...FOUNDATION_THEME.colors.primary,
+        500: state.themePrimary || FOUNDATION_THEME.colors.primary[500],
+        600: state.themePrimary || FOUNDATION_THEME.colors.primary[600],
+        700: state.themePrimary || FOUNDATION_THEME.colors.primary[700],
+      },
+      yellow: {
+        ...FOUNDATION_THEME.colors.yellow,
+        50: state.bannerBg || FOUNDATION_THEME.colors.yellow[50],
+      },
+    },
+  };
+}
 
 class DemoErrorBoundary extends React.Component<
   DemoErrorBoundaryProps,
@@ -149,6 +222,59 @@ function parseOptionalJsonObject(value: string): Record<string, JsonValue> | und
   return parsed as Record<string, JsonValue>;
 }
 
+function normalizeDemoDraft(
+  value: Partial<DemoDraftState> | null | undefined,
+  options: { preserveTheme: boolean },
+): DemoDraftState {
+  const base = options.preserveTheme ? value : undefined;
+
+  return {
+    ...DEFAULT_DRAFT,
+    host: typeof value?.host === "string" ? value.host : DEFAULT_DRAFT.host,
+    orgId: typeof value?.orgId === "string" ? value.orgId : DEFAULT_DRAFT.orgId,
+    workspace:
+      typeof value?.workspace === "string" ? value.workspace : DEFAULT_DRAFT.workspace,
+    token: typeof value?.token === "string" ? value.token : DEFAULT_DRAFT.token,
+    features:
+      typeof value?.features === "string" ? value.features : DEFAULT_DRAFT.features,
+    allowOverrideContextEditing: Boolean(value?.allowOverrideContextEditing),
+    scopeJson:
+      typeof value?.scopeJson === "string" ? value.scopeJson : DEFAULT_DRAFT.scopeJson,
+    scopeLocked:
+      typeof value?.scopeLocked === "boolean"
+        ? value.scopeLocked
+        : DEFAULT_DRAFT.scopeLocked,
+    strict: Boolean(value?.strict),
+    themeMode:
+      base?.themeMode === "light" ||
+        base?.themeMode === "dark" ||
+        base?.themeMode === "system"
+        ? base.themeMode
+        : DEFAULT_DRAFT.themeMode,
+    themePrimary:
+      typeof base?.themePrimary === "string"
+        ? base.themePrimary
+        : DEFAULT_DRAFT.themePrimary,
+    themeBg: typeof base?.themeBg === "string" ? base.themeBg : DEFAULT_DRAFT.themeBg,
+    themePanel:
+      typeof base?.themePanel === "string" ? base.themePanel : DEFAULT_DRAFT.themePanel,
+    buttonBg: typeof base?.buttonBg === "string" ? base.buttonBg : DEFAULT_DRAFT.buttonBg,
+    buttonText:
+      typeof base?.buttonText === "string" ? base.buttonText : DEFAULT_DRAFT.buttonText,
+    iconColor:
+      typeof base?.iconColor === "string" ? base.iconColor : DEFAULT_DRAFT.iconColor,
+    searchBorder:
+      typeof base?.searchBorder === "string"
+        ? base.searchBorder
+        : DEFAULT_DRAFT.searchBorder,
+    dropdownSelectedBg:
+      typeof base?.dropdownSelectedBg === "string"
+        ? base.dropdownSelectedBg
+        : DEFAULT_DRAFT.dropdownSelectedBg,
+    bannerBg: typeof base?.bannerBg === "string" ? base.bannerBg : DEFAULT_DRAFT.bannerBg,
+  };
+}
+
 function readPersistedState(): DemoPersistedState | null {
   const raw = window.localStorage.getItem(STORAGE_KEY);
   if (!raw) return null;
@@ -162,33 +288,24 @@ function readPersistedState(): DemoPersistedState | null {
     const feature = isSuperpositionFeature(String(parsed.feature))
       ? (parsed.feature as SuperpositionFeature)
       : DEFAULT_FEATURE;
-    const themeMode =
-      parsed.themeMode === "light" ||
-      parsed.themeMode === "dark" ||
-      parsed.themeMode === "system"
-        ? parsed.themeMode
-        : DEFAULT_DRAFT.themeMode;
+    const preserveTheme = parsed.version === STORAGE_VERSION;
+    const normalizedDraft = normalizeDemoDraft(parsed, { preserveTheme });
+    const normalizedActiveConnection = parsed.activeConnection
+      ? normalizeDemoDraft(parsed.activeConnection, { preserveTheme })
+      : undefined;
 
     const normalized: DemoPersistedState = {
-      ...DEFAULT_DRAFT,
-      ...parsed,
+      ...normalizedDraft,
+      version: STORAGE_VERSION,
       feature,
-      themeMode,
       connected: Boolean(parsed.connected),
+      activeConnection: normalizedActiveConnection,
     };
 
-    if (typeof normalized.scopeJson !== "string") {
-      normalized.scopeJson = DEFAULT_DRAFT.scopeJson;
-    }
-    if (typeof normalized.writeScopeJson !== "string") {
-      normalized.writeScopeJson = DEFAULT_DRAFT.writeScopeJson;
-    }
-    normalized.strict = Boolean(normalized.strict);
-
     if (
-      normalized.activeConnection &&
-      (typeof normalized.activeConnection !== "object" ||
-        Array.isArray(normalized.activeConnection))
+      parsed.activeConnection &&
+      (typeof parsed.activeConnection !== "object" ||
+        Array.isArray(parsed.activeConnection))
     ) {
       normalized.activeConnection = undefined;
     }
@@ -231,6 +348,29 @@ function buildTheme(state: DemoDraftState): SuperpositionThemeConfig {
     banner: {
       bgColor: state.bannerBg || undefined,
     },
+    blend: {
+      foundationTokens: {
+        colors: {
+          gray: {
+            0: state.themePanel || undefined,
+            50: state.themeBg || undefined,
+            100: state.themeBg || undefined,
+            150: state.searchBorder || undefined,
+            200: state.searchBorder || undefined,
+            400: state.iconColor || undefined,
+            500: state.iconColor || undefined,
+          },
+          primary: {
+            500: state.themePrimary || undefined,
+            600: state.themePrimary || undefined,
+            700: state.themePrimary || undefined,
+          },
+          yellow: {
+            50: state.bannerBg || undefined,
+          },
+        },
+      },
+    },
   };
 }
 
@@ -248,24 +388,31 @@ function buildConfig(
     auth: state.token ? { mode: "bearer", token: state.token } : undefined,
     capabilities: state.allowOverrideContextEditing
       ? {
-          overrides: {
-            editContext: true,
-          },
-        }
+        overrides: {
+          editContext: true,
+        },
+      }
       : undefined,
     scope: {
       context: parseOptionalJsonObject(state.scopeJson),
-      writeContext: parseOptionalJsonObject(state.writeScopeJson),
       locked: state.scopeLocked,
     },
     strict: state.strict,
     features,
     theme: buildTheme(state),
+    table: {
+      serialNumber: {
+        enabled: true,
+        header: "S.No",
+        width: "72px",
+        align: "left",
+      },
+    },
     routing: {
       mode: "external",
       currentFeature: feature,
       initialFeature: feature,
-      onNavigate: () => {},
+      onNavigate: () => { },
       getFeatureHref: () => "",
     },
   };
@@ -288,6 +435,8 @@ function DemoApp() {
   const apiMode = draft.host.trim().startsWith("/") ? "host proxy" : "direct API";
   const selectedFeatures = parseFeatureList(draft.features);
   const allFeaturesSelected = !selectedFeatures;
+  const demoFoundationTokens = useMemo(() => buildDemoFoundationTokens(draft), [draft]);
+  const demoBlendTheme = draft.themeMode === "dark" ? BlendTheme.DARK : BlendTheme.LIGHT;
 
   const handleFeatureChange = (feature: SuperpositionFeature, checked: boolean) => {
     const current = selectedFeatures ?? [...SUPERPOSITION_FEATURES];
@@ -313,6 +462,7 @@ function DemoApp() {
     window.localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
+        version: STORAGE_VERSION,
         ...draft,
         feature: activeFeature,
         connected: Boolean(activeConnection),
@@ -347,19 +497,19 @@ function DemoApp() {
           ...baseConfig,
           routing: routing
             ? {
-                ...routing,
-                currentFeature: activeFeature,
-                initialFeature: activeFeature,
-                onNavigate: (feature) => {
-                  setActiveFeature(feature);
-                  writeFeatureToUrl(feature);
-                },
-                getFeatureHref: (feature) => {
-                  const url = new URL(window.location.href);
-                  url.searchParams.set("feature", feature);
-                  return url.pathname + url.search;
-                },
-              }
+              ...routing,
+              currentFeature: activeFeature,
+              initialFeature: activeFeature,
+              onNavigate: (feature) => {
+                setActiveFeature(feature);
+                writeFeatureToUrl(feature);
+              },
+              getFeatureHref: (feature) => {
+                const url = new URL(window.location.href);
+                url.searchParams.set("feature", feature);
+                return url.pathname + url.search;
+              },
+            }
             : undefined,
         },
         error: null,
@@ -436,14 +586,16 @@ function DemoApp() {
   }, []);
 
   return (
-    <>
-      <div className="toolbar">
+    <BlendThemeProvider theme={demoBlendTheme} foundationTokens={demoFoundationTokens}>
+      <div className="toolbar" style={demoToolbarStyle}>
         <div className="toolbar-links">
           <a href="./custom-elements.html">Open custom element demo</a>
           <a href="./shared-core-feature-globals.html">Open shared-core global demo</a>
         </div>
 
-        <label htmlFor="host">Host:</label>
+        <label htmlFor="host" style={demoLabelStyle}>
+          Host:
+        </label>
         <input
           id="host"
           type="text"
@@ -453,9 +605,13 @@ function DemoApp() {
           title="Use /api to go through Vite proxy (avoids CORS)"
         />
 
-        <span className="toolbar-chip">API: {apiMode}</span>
+        <span className="toolbar-chip" style={demoChipStyle}>
+          API: {apiMode}
+        </span>
 
-        <label htmlFor="org">Org ID:</label>
+        <label htmlFor="org" style={demoLabelStyle}>
+          Org ID:
+        </label>
         <input
           id="org"
           type="text"
@@ -464,7 +620,9 @@ function DemoApp() {
           style={{ width: 120 }}
         />
 
-        <label htmlFor="workspace">Workspace:</label>
+        <label htmlFor="workspace" style={demoLabelStyle}>
+          Workspace:
+        </label>
         <input
           id="workspace"
           type="text"
@@ -473,7 +631,9 @@ function DemoApp() {
           style={{ width: 120 }}
         />
 
-        <label htmlFor="token">Token:</label>
+        <label htmlFor="token" style={demoLabelStyle}>
+          Token:
+        </label>
         <input
           id="token"
           type="password"
@@ -483,7 +643,15 @@ function DemoApp() {
           style={{ width: 150 }}
         />
 
-        <span style={{ fontSize: 13, fontWeight: 500, color: "#374151" }}>Features:</span>
+        <span
+          style={{
+            fontSize: 13,
+            fontWeight: BLEND_FONT.weight[500],
+            color: BLEND_COLORS.gray[700],
+          }}
+        >
+          Features:
+        </span>
         <label style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
           <input
             type="checkbox"
@@ -521,7 +689,9 @@ function DemoApp() {
           Override Context Editing
         </label>
 
-        <label htmlFor="scope-json">Scoped Filter:</label>
+        <label htmlFor="scope-json" style={demoLabelStyle}>
+          Scoped Filter:
+        </label>
         <input
           id="scope-json"
           type="text"
@@ -532,18 +702,9 @@ function DemoApp() {
           title="Optional bounded context for the embedded UI"
         />
 
-        <label htmlFor="write-scope-json">Write Scope:</label>
-        <input
-          id="write-scope-json"
-          type="text"
-          value={draft.writeScopeJson}
-          onChange={(event) => handleFieldChange("writeScopeJson", event.target.value)}
-          placeholder='{"merchant_id":"m_123","profile_id":"p_123"}'
-          style={{ width: 260 }}
-          title="Optional narrower context for create and edit actions"
-        />
-
-        <label htmlFor="lock-scoped-dimensions">Lock Scope:</label>
+        <label htmlFor="lock-scoped-dimensions" style={demoLabelStyle}>
+          Lock Scope:
+        </label>
         <input
           id="lock-scoped-dimensions"
           type="checkbox"
@@ -551,7 +712,9 @@ function DemoApp() {
           onChange={(event) => handleFieldChange("scopeLocked", event.target.checked)}
         />
 
-        <label htmlFor="strict-scope">Strict:</label>
+        <label htmlFor="strict-scope" style={demoLabelStyle}>
+          Strict:
+        </label>
         <input
           id="strict-scope"
           type="checkbox"
@@ -559,7 +722,9 @@ function DemoApp() {
           onChange={(event) => handleFieldChange("strict", event.target.checked)}
         />
 
-        <label htmlFor="theme-mode">Theme Mode:</label>
+        <label htmlFor="theme-mode" style={demoLabelStyle}>
+          Theme Mode:
+        </label>
         <select
           id="theme-mode"
           value={draft.themeMode}
@@ -572,7 +737,9 @@ function DemoApp() {
           <option value="dark">dark</option>
         </select>
 
-        <label htmlFor="theme-primary">Primary:</label>
+        <label htmlFor="theme-primary" style={demoLabelStyle}>
+          Primary:
+        </label>
         <input
           id="theme-primary"
           type="color"
@@ -580,7 +747,9 @@ function DemoApp() {
           onChange={(event) => handleFieldChange("themePrimary", event.target.value)}
         />
 
-        <label htmlFor="theme-bg">Background:</label>
+        <label htmlFor="theme-bg" style={demoLabelStyle}>
+          Background:
+        </label>
         <input
           id="theme-bg"
           type="color"
@@ -588,7 +757,9 @@ function DemoApp() {
           onChange={(event) => handleFieldChange("themeBg", event.target.value)}
         />
 
-        <label htmlFor="theme-panel">Panel:</label>
+        <label htmlFor="theme-panel" style={demoLabelStyle}>
+          Panel:
+        </label>
         <input
           id="theme-panel"
           type="color"
@@ -596,7 +767,9 @@ function DemoApp() {
           onChange={(event) => handleFieldChange("themePanel", event.target.value)}
         />
 
-        <label htmlFor="button-bg">Button:</label>
+        <label htmlFor="button-bg" style={demoLabelStyle}>
+          Button:
+        </label>
         <input
           id="button-bg"
           type="color"
@@ -605,7 +778,9 @@ function DemoApp() {
           title="theme.button.primary.bgColor"
         />
 
-        <label htmlFor="icon-color">Icons:</label>
+        <label htmlFor="icon-color" style={demoLabelStyle}>
+          Icons:
+        </label>
         <input
           id="icon-color"
           type="color"
@@ -614,7 +789,9 @@ function DemoApp() {
           title="theme.icon.color"
         />
 
-        <label htmlFor="search-border">Search Border:</label>
+        <label htmlFor="search-border" style={demoLabelStyle}>
+          Search Border:
+        </label>
         <input
           id="search-border"
           type="color"
@@ -623,7 +800,9 @@ function DemoApp() {
           title="theme.search.borderColor"
         />
 
-        <label htmlFor="dropdown-selected-bg">Dropdown Selected:</label>
+        <label htmlFor="dropdown-selected-bg" style={demoLabelStyle}>
+          Dropdown Selected:
+        </label>
         <input
           id="dropdown-selected-bg"
           type="color"
@@ -634,7 +813,9 @@ function DemoApp() {
           title="theme.dropdown.option.selectedBgColor"
         />
 
-        <label htmlFor="banner-bg">Banner:</label>
+        <label htmlFor="banner-bg" style={demoLabelStyle}>
+          Banner:
+        </label>
         <input
           id="banner-bg"
           type="color"
@@ -643,25 +824,57 @@ function DemoApp() {
           title="theme.banner.bgColor"
         />
 
-        <button id="connect-btn" onClick={() => void connect()} disabled={isConnecting}>
-          {isConnecting ? "Connecting..." : "Connect"}
-        </button>
+        <Button
+          id="reset-theme-btn"
+          buttonType={ButtonType.SECONDARY}
+          size={ButtonSize.MEDIUM}
+          text="Reset Blend theme"
+          onClick={() =>
+            setDraft((current) => ({
+              ...current,
+              themeMode: DEFAULT_DRAFT.themeMode,
+              themePrimary: DEFAULT_DRAFT.themePrimary,
+              themeBg: DEFAULT_DRAFT.themeBg,
+              themePanel: DEFAULT_DRAFT.themePanel,
+              buttonBg: DEFAULT_DRAFT.buttonBg,
+              buttonText: DEFAULT_DRAFT.buttonText,
+              iconColor: DEFAULT_DRAFT.iconColor,
+              searchBorder: DEFAULT_DRAFT.searchBorder,
+              dropdownSelectedBg: DEFAULT_DRAFT.dropdownSelectedBg,
+              bannerBg: DEFAULT_DRAFT.bannerBg,
+            }))
+          }
+        />
+
+        <Button
+          id="connect-btn"
+          buttonType={ButtonType.PRIMARY}
+          size={ButtonSize.MEDIUM}
+          text={isConnecting ? "Connecting..." : "Connect"}
+          onClick={() => void connect()}
+          disabled={isConnecting}
+        />
       </div>
 
       <div id="status" className={status.tone === "idle" ? "" : status.tone}>
         {status.message}
       </div>
 
-      <div className="demo-notes">
+      <div className="demo-notes" style={demoNotesStyle}>
         <div>
           <strong>Bounded embed:</strong> set <code>scope.context</code> to scope the UI,
           and keep <code>scope.locked</code> on to prevent edits outside that slice.
         </div>
         <div>
-          <strong>Theme:</strong> these controls map to nested{" "}
-          <code>config.theme.colors</code>, <code>theme.button.primary</code>,{" "}
-          <code>theme.icon</code>, <code>theme.search</code>, <code>theme.dropdown</code>,
-          and <code>theme.banner</code> values.
+          <strong>Blend theme:</strong> defaults come from <code>FOUNDATION_THEME</code>.
+          These controls map to nested <code>config.theme.colors</code>,{" "}
+          <code>theme.button.primary</code>, <code>theme.icon</code>,{" "}
+          <code>theme.search</code>, <code>theme.dropdown</code>,<code>theme.banner</code>
+          , and <code>theme.blend.foundationTokens</code>.
+        </div>
+        <div>
+          <strong>Tables:</strong> the demo enables the configurable serial number column
+          by default so the Blend <code>DataTable</code> path is visible.
         </div>
         <div>
           <strong>API:</strong> the UI uses its own REST client; <code>apiBaseUrl</code>{" "}
@@ -675,7 +888,7 @@ function DemoApp() {
         </div>
       </div>
 
-      <div id="app-root">
+      <div id="app-root" style={demoAppRootStyle}>
         {config ? (
           <SuperpositionUIProvider config={config}>
             <AlertProvider>
@@ -683,12 +896,18 @@ function DemoApp() {
             </AlertProvider>
           </SuperpositionUIProvider>
         ) : (
-          <p style={{ color: "#9ca3af", textAlign: "center", paddingTop: 80 }}>
+          <p
+            style={{
+              color: BLEND_COLORS.gray[400],
+              textAlign: "center",
+              paddingTop: 80,
+            }}
+          >
             Configure connection above and click <strong>Connect</strong>
           </p>
         )}
       </div>
-    </>
+    </BlendThemeProvider>
   );
 }
 

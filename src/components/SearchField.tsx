@@ -1,36 +1,11 @@
+import { SearchInput } from "@juspay/blend-design-system";
+import { Search } from "lucide-react";
+
 export interface SearchFieldProps {
   value: string;
   onChange: (value: string) => void;
   placeholder: string;
   ariaLabel?: string;
-}
-
-function SearchIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 20 20"
-      width="var(--sp-search-icon-size)"
-      height="var(--sp-search-icon-size)"
-      style={{ color: "var(--sp-search-current-icon-color)", flex: "0 0 auto" }}
-    >
-      <circle
-        cx="8.7"
-        cy="8.7"
-        r="5.2"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-      />
-      <path
-        d="m12.6 12.6 3.2 3.2"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeWidth="1.8"
-      />
-    </svg>
-  );
 }
 
 export function SearchField({
@@ -40,41 +15,23 @@ export function SearchField({
   ariaLabel = placeholder,
 }: SearchFieldProps) {
   return (
-    <label
+    <div
       className="sp-search-field"
       style={{
         width: "var(--sp-search-width)",
         minHeight: "var(--sp-search-height)",
-        display: "flex",
-        alignItems: "center",
-        gap: "var(--sp-space-sm)",
-        padding: "var(--sp-search-padding)",
-        border: "1px solid var(--sp-search-current-border)",
-        borderRadius: "var(--sp-search-radius)",
-        background: "var(--sp-search-current-bg)",
-        color: "var(--sp-search-current-text)",
-        boxShadow: "var(--sp-search-current-shadow)",
         opacity: "var(--sp-search-opacity)",
       }}
     >
-      <SearchIcon />
-      <input
-        className="sp-search-input"
+      <SearchInput
         aria-label={ariaLabel}
-        style={{
-          width: "100%",
-          minWidth: 0,
-          border: 0,
-          outline: "none",
-          background: "transparent",
-          color: "var(--sp-search-text)",
-          fontSize: "var(--sp-search-font-size)",
-          fontWeight: "var(--sp-search-font-weight)",
-        }}
         placeholder={placeholder}
         value={value}
+        leftSlot={<Search aria-hidden="true" focusable="false" strokeWidth={2} />}
+        allowClear
+        onClear={() => onChange("")}
         onChange={(event) => onChange(event.target.value)}
       />
-    </label>
+    </div>
   );
 }

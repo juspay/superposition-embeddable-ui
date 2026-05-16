@@ -40,12 +40,29 @@
   --sp-search-current-border: var(--sp-search-border);
   --sp-search-current-shadow: var(--sp-search-shadow);
   --sp-search-current-icon-color: var(--sp-search-icon-color);
+  display: block;
   transition:
     border-color 180ms ease,
     box-shadow 180ms ease,
     background 180ms ease,
     color 180ms ease,
     opacity 180ms ease;
+}
+
+.sp-ui .sp-search-field > * {
+  width: 100%;
+}
+
+.sp-ui .sp-search-field [role="searchbox"] {
+  min-height: var(--sp-search-height);
+  border: 1px solid var(--sp-search-current-border) !important;
+  border-bottom: 1px solid var(--sp-search-current-border) !important;
+  border-radius: var(--sp-search-radius) !important;
+  background: var(--sp-search-current-bg) !important;
+  box-shadow: var(--sp-search-current-shadow) !important;
+  color: var(--sp-search-current-text) !important;
+  font-size: var(--sp-search-font-size) !important;
+  font-weight: var(--sp-search-font-weight) !important;
 }
 
 .sp-ui .sp-search-field:hover {
@@ -66,7 +83,7 @@
   outline-offset: var(--sp-search-focus-outline-offset);
 }
 
-.sp-ui .sp-search-input::placeholder {
+.sp-ui .sp-search-field [role="searchbox"]::placeholder {
   color: var(--sp-search-placeholder);
   opacity: var(--sp-search-placeholder-opacity);
 }

@@ -49,9 +49,12 @@ export function contextCanBeEditedInScope(
     return false;
   }
 
-  return conditionEntries.every(([key, conditionValue]) => {
-    if (!(key in scopedContext)) return false;
-    return jsonValueEquals(conditionValue, scopedContext[key]);
+  // Every scoped dimension must appear in the condition with a matching value.
+  // The condition may have additional dimensions beyond the scope — that's fine.
+  return Object.entries(scopedContext).every(([key, scopedValue]) => {
+    const conditionValue = condition[key];
+    if (conditionValue === undefined) return false;
+    return jsonValueEquals(conditionValue, scopedValue);
   });
 }
 

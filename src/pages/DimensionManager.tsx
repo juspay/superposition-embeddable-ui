@@ -222,6 +222,11 @@ function DimensionManagerContent({
         keyExtractor={(r) => r.dimension}
         loading={loading}
         emptyMessage="No dimensions found"
+        emptyDescription={
+          canCreate
+            ? "Create a dimension to make it available for configs and override context."
+            : "No dimensions are available for this workspace."
+        }
         {...serialNumberProps}
       />
 

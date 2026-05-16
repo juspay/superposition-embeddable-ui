@@ -1,8 +1,21 @@
 import React, { createContext, useCallback, useContext, useState } from "react";
 import { createPortal } from "react-dom";
+import {
+  Alert as BlendAlert,
+  AlertStyle,
+  AlertVariant,
+  Button,
+  ButtonSize,
+  ButtonType,
+  Modal as BlendModal,
+} from "@juspay/blend-design-system";
 import type { ConfirmInput, SuperpositionUiAdapters } from "../types";
 import { confirmAction as resolveConfirmAction } from "../utils/ui-adapters";
-import { useOptionalSuperposition } from "./SuperpositionUIProvider";
+import {
+  useOptionalSuperposition,
+  useOptionalSuperpositionTheme,
+  useOptionalSuperpositionThemeStyles,
+} from "./SuperpositionUIProvider";
 
 export type AlertType = "success" | "error" | "warning" | "info";
 
@@ -73,61 +86,23 @@ export function AlertBar({
       }}
     >
       {alerts.map((alert) => {
-        const palette: Record<AlertType, React.CSSProperties> = {
-          success: {
-            background: "var(--sp-toast-success-bg)",
-            color: "var(--sp-toast-success-text)",
-            border: "1px solid var(--sp-toast-success-border)",
-          },
-          error: {
-            background: "var(--sp-toast-error-bg)",
-            color: "var(--sp-toast-error-text)",
-            border: "1px solid var(--sp-toast-error-border)",
-          },
-          warning: {
-            background: "var(--sp-toast-warning-bg)",
-            color: "var(--sp-toast-warning-text)",
-            border: "1px solid var(--sp-toast-warning-border)",
-          },
-          info: {
-            background: "var(--sp-toast-info-bg)",
-            color: "var(--sp-toast-info-text)",
-            border: "1px solid var(--sp-toast-info-border)",
-          },
+        const variant: Record<AlertType, AlertVariant> = {
+          success: AlertVariant.SUCCESS,
+          error: AlertVariant.ERROR,
+          warning: AlertVariant.WARNING,
+          info: AlertVariant.PRIMARY,
         };
 
         return (
-          <div
+          <BlendAlert
             key={alert.id}
-            style={{
-              ...palette[alert.type],
-              padding: "var(--sp-toast-padding)",
-              borderRadius: "var(--sp-toast-radius)",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              minWidth: "var(--sp-alert-min-width)",
-              fontSize: "var(--sp-toast-font-size)",
-              fontWeight: "var(--sp-toast-font-weight)",
-              boxShadow: "var(--sp-toast-shadow)",
-            }}
-          >
-            <span>{alert.message}</span>
-            <button
-              onClick={() => removeAlert(alert.id)}
-              style={{
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                padding: "0 0 0 var(--sp-space-sm)",
-                fontSize: "1.15rem",
-                color: "currentColor",
-              }}
-              aria-label="Dismiss"
-            >
-              ×
-            </button>
-          </div>
+            heading={alert.message}
+            description=""
+            variant={variant[alert.type]}
+            style={AlertStyle.SUBTLE}
+            onClose={() => removeAlert(alert.id)}
+            minWidth="var(--sp-alert-min-width)"
+          />
         );
       })}
     </div>
@@ -138,6 +113,8 @@ export function AlertBar({
 
 export function AlertProvider({ children }: { children: React.ReactNode }) {
   const superposition = useOptionalSuperposition();
+  const theme = useOptionalSuperpositionTheme();
+  const themeStyles = useOptionalSuperpositionThemeStyles();
   const ui = superposition?.config.ui;
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [confirmRequest, setConfirmRequest] = useState<{
@@ -189,44 +166,18 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
   const isDestructiveConfirm = confirmRequest?.input.variant === "destructive";
   const confirmFooter = confirmRequest ? (
     <>
-      <button
-        type="button"
+      <Button
+        buttonType={ButtonType.SECONDARY}
+        size={ButtonSize.MEDIUM}
+        text={confirmRequest.input.cancelLabel ?? "Cancel"}
         onClick={() => closeConfirm(false)}
-        style={{
-          padding: "var(--sp-space-sm) var(--sp-space-md)",
-          background: "var(--sp-button-secondary-bg)",
-          color: "var(--sp-button-secondary-text)",
-          border: "1px solid var(--sp-button-secondary-border)",
-          borderRadius: "var(--sp-control-radius)",
-          font: "inherit",
-          fontWeight: 600,
-          cursor: "pointer",
-        }}
-      >
-        {confirmRequest.input.cancelLabel ?? "Cancel"}
-      </button>
-      <button
-        type="button"
+      />
+      <Button
+        buttonType={isDestructiveConfirm ? ButtonType.DANGER : ButtonType.PRIMARY}
+        size={ButtonSize.MEDIUM}
+        text={confirmRequest.input.confirmLabel ?? "Confirm"}
         onClick={() => closeConfirm(true)}
-        style={{
-          padding: "var(--sp-space-sm) var(--sp-space-md)",
-          background: isDestructiveConfirm
-            ? "var(--sp-feedback-danger-bg)"
-            : "var(--sp-button-primary-bg)",
-          color: isDestructiveConfirm
-            ? "var(--sp-feedback-danger-text)"
-            : "var(--sp-button-primary-text)",
-          border: isDestructiveConfirm
-            ? "1px solid var(--sp-feedback-danger-border)"
-            : "1px solid var(--sp-button-primary-border)",
-          borderRadius: "var(--sp-control-radius)",
-          font: "inherit",
-          fontWeight: 700,
-          cursor: "pointer",
-        }}
-      >
-        {confirmRequest.input.confirmLabel ?? "Confirm"}
-      </button>
+      />
     </>
   ) : null;
 
@@ -253,50 +204,91 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
       {confirmRequest &&
         !ui?.renderModal &&
         createPortal(
-          <div
-            style={{
-              position: "fixed",
-              inset: 0,
-              zIndex: ui?.modalZIndex ?? 10000,
-              background: "var(--sp-color-overlay)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "var(--sp-space-lg)",
-            }}
-            onClick={() => closeConfirm(false)}
+          <BlendModal
+            isOpen
+            onClose={() => closeConfirm(false)}
+            title={confirmRequest.input.title}
+            isCustom
+            closeOnBackdropClick
+            maxWidth="var(--sp-confirm-width)"
+            minWidth="var(--sp-confirm-width)"
+            useDrawerOnMobile
           >
             <div
-              role="dialog"
-              aria-modal="true"
-              aria-label={confirmRequest.input.title}
+              className="sp-ui"
+              data-sp-theme={theme?.resolvedMode}
               style={{
+                ...themeStyles,
                 width: "var(--sp-confirm-width)",
+                maxWidth: "100%",
                 background: "var(--sp-color-panel)",
-                border: "1px solid var(--sp-color-border)",
-                borderRadius: "var(--sp-card-radius)",
-                boxShadow: "var(--sp-shadow-md)",
-                padding: "var(--sp-space-lg)",
-                display: "grid",
-                gap: "var(--sp-space-md)",
               }}
-              onClick={(event) => event.stopPropagation()}
             >
-              <div style={{ fontSize: "1.05rem", fontWeight: 700 }}>
-                {confirmRequest.input.title}
-              </div>
-              {confirmRequest.input.description && confirmContent}
               <div
                 style={{
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  gap: "var(--sp-space-sm)",
+                  padding: "var(--sp-space-lg)",
+                  color: "var(--sp-color-muted)",
+                  lineHeight: 1.5,
+                  overflowWrap: "anywhere",
                 }}
               >
-                {confirmFooter}
+                {confirmRequest.input.description}
+              </div>
+              <div
+                style={{
+                  padding: "var(--sp-space-md) var(--sp-space-lg)",
+                  borderTop: "1px solid var(--sp-color-border)",
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: 12,
+                }}
+              >
+                <button
+                  type="button"
+                  style={{
+                    padding: "var(--sp-button-padding)",
+                    background: "var(--sp-button-secondary-bg)",
+                    color: "var(--sp-button-secondary-text)",
+                    border: "1px solid var(--sp-button-secondary-border)",
+                    borderRadius: "var(--sp-button-radius)",
+                    fontSize: "var(--sp-button-font-size)",
+                    fontWeight: "var(--sp-button-font-weight)",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => closeConfirm(false)}
+                >
+                  {confirmRequest.input.cancelLabel ?? "Cancel"}
+                </button>
+                <button
+                  type="button"
+                  style={{
+                    padding: "var(--sp-button-padding)",
+                    background: isDestructiveConfirm
+                      ? "var(--sp-button-danger-bg)"
+                      : "var(--sp-button-primary-bg)",
+                    color: isDestructiveConfirm
+                      ? "var(--sp-button-danger-text)"
+                      : "var(--sp-button-primary-text)",
+                    border: `1px solid ${
+                      isDestructiveConfirm
+                        ? "var(--sp-button-danger-border)"
+                        : "var(--sp-button-primary-border)"
+                    }`,
+                    borderRadius: "var(--sp-button-radius)",
+                    fontSize: "var(--sp-button-font-size)",
+                    fontWeight: "var(--sp-button-font-weight)",
+                    boxShadow: isDestructiveConfirm
+                      ? "none"
+                      : "var(--sp-button-primary-shadow)",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => closeConfirm(true)}
+                >
+                  {confirmRequest.input.confirmLabel ?? "Confirm"}
+                </button>
               </div>
             </div>
-          </div>,
+          </BlendModal>,
           portalTarget ?? document.body,
         )}
     </AlertContext.Provider>

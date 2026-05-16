@@ -50,7 +50,6 @@ The host app only needs to provide a `config` object.
 - `apiBaseUrl`: where the embeddable UI should send REST requests.
 - `orgId` and `workspace`: which Superposition workspace to manage.
 - `scope.context` (optional): a bounded filter for scoped embedding.
-- `scope.writeContext` (optional): a narrower boundary for create/edit actions.
 - `scope.locked` (optional): keeps the UI inside that bounded slice.
 - `strict` (optional): prevents extra boundary context and uses exact context matching for override lists.
 - `features` (optional): which screens are allowed to render. `[]` renders no feature UI.
@@ -206,16 +205,15 @@ The bounded filter belongs in `config.scope.context` because it affects list vie
 ```tsx
 scope: {
   context: { region: "us-east-1", tenant: "acme" },
-  writeContext: { tenant: "acme" },
   locked: true,
 },
 strict: true,
 ```
 
-If you leave `scope.context` out, the overrides UI is view-only: it can list
-overrides, but it will not show create or edit actions. If `scope.writeContext`
-is supplied, override create/edit actions are limited to combinations inside
-that write boundary; otherwise they use `scope.context`.
+If you leave `scope.context` out, the overrides UI is view-only unless
+`capabilities.overrides.editContext` is enabled. The backend is responsible
+for authorizing create and edit actions — if the token lacks permission,
+the backend will reject the request.
 
 Set top-level `strict: true` when the host scope should be the whole boundary.
 In strict mode, users cannot add extra boundary filter context, and the admin
@@ -228,9 +226,9 @@ the List Contexts API as `dimension[...]` query params; strict mode sends
 `readOnly` is still the fastest way to disable all mutating actions. Use
 `capabilities` when the host needs more precise control.
 
-For overrides, create and update actions also require a write boundary
-(`scope.writeContext` or `scope.context`). This keeps embedded hosts from
-accidentally exposing global override edits.
+For overrides, create and update actions are controlled by `capabilities`.
+The backend enforces authorization — if the request lacks valid credentials,
+it will be rejected.
 
 ```tsx
 capabilities: {
@@ -347,25 +345,25 @@ theme: {
 
 Theme field effects:
 
-| Token                                                                   | Affects                                                                 |
-| ----------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| `colors.bg`/`colors.panel`/`colors.text`/`colors.muted`/`colors.border` | outer surfaces, panels, default text, muted copy, and borders           |
-| `colors.primary`/`colors.success`/`colors.warning`/`colors.danger`      | accent, feedback, and semantic state colors                             |
-| `radius.sm`/`radius.md`/`radius.lg`                                     | compact, control, and card/modal radius scale                           |
-| `spacing.xs`/`spacing.sm`/`spacing.md`/`spacing.lg`                     | shell-level spacing scale                                               |
-| `shadow.sm`/`shadow.md`                                                 | shell, toast, modal, and tooltip elevation                              |
-| `button`                                                                | shared button sizing, typography, border radius, and disabled opacity   |
-| `button.primary`/`button.secondary`/`button.danger`                     | per-variant button colors and elevation                                 |
+| Token                                                                   | Affects                                                                              |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `colors.bg`/`colors.panel`/`colors.text`/`colors.muted`/`colors.border` | outer surfaces, panels, default text, muted copy, and borders                        |
+| `colors.primary`/`colors.success`/`colors.warning`/`colors.danger`      | accent, feedback, and semantic state colors                                          |
+| `radius.sm`/`radius.md`/`radius.lg`                                     | compact, control, and card/modal radius scale                                        |
+| `spacing.xs`/`spacing.sm`/`spacing.md`/`spacing.lg`                     | shell-level spacing scale                                                            |
+| `shadow.sm`/`shadow.md`                                                 | shell, toast, modal, and tooltip elevation                                           |
+| `button`                                                                | shared button sizing, typography, border radius, and disabled opacity                |
+| `button.primary`/`button.secondary`/`button.danger`                     | per-variant button colors and elevation                                              |
 | `table`/`table.header`                                                  | table opacity plus header background, label color, type, spacing, and text transform |
-| `form.label`/`form.helperTextColor`/`form.removeButton`                 | form labels, helper copy, and override form delete icon button          |
-| `icon.color`/`icon.size`/`icon.lock`                                    | default neutral/action icons and locked-condition icon styling          |
-| `search`/`search.icon`                                                  | search box shape, opacity, hover/focus highlight, placeholder, and icon styling |
-| `pageTitle`                                                             | top-level page heading typography and color                             |
-| `banner`                                                                | read-only and fixed-scope banner styling                                |
-| `toast`/`toast.success`/`toast.error`/`toast.warning`/`toast.info`      | toast styling and per-tone colors                                       |
-| `dropdown.control`/`dropdown.menu`/`dropdown.option`                    | structured override form dropdown styling                               |
-| `jsonValue`                                                             | inline and expanded JSON value presentation                             |
-| `tooltip`                                                               | icon button tooltip colors, shape, elevation, and type size             |
+| `form.label`/`form.helperTextColor`/`form.removeButton`                 | form labels, helper copy, and override form delete icon button                       |
+| `icon.color`/`icon.size`/`icon.lock`                                    | default neutral/action icons and locked-condition icon styling                       |
+| `search`/`search.icon`                                                  | search box shape, opacity, hover/focus highlight, placeholder, and icon styling      |
+| `pageTitle`                                                             | top-level page heading typography and color                                          |
+| `banner`                                                                | read-only and fixed-scope banner styling                                             |
+| `toast`/`toast.success`/`toast.error`/`toast.warning`/`toast.info`      | toast styling and per-tone colors                                                    |
+| `dropdown.control`/`dropdown.menu`/`dropdown.option`                    | structured override form dropdown styling                                            |
+| `jsonValue`                                                             | inline and expanded JSON value presentation                                          |
+| `tooltip`                                                               | icon button tooltip colors, shape, elevation, and type size                          |
 
 Table behavior lives outside theme:
 
@@ -463,9 +461,9 @@ Granular embeds can still use the same provider config. For example, this render
 </SuperpositionUIProvider>
 ```
 
-For scoped overrides, the fixed write boundary is applied automatically. The
-create form only lets users choose default config keys and values; it does not
-let them edit the fixed context.
+For scoped overrides, the fixed OMP write boundary is applied automatically.
+When context editing is enabled, the create form lets users add extra dimensions
+on top of that OMP boundary; it still blocks dimension-only override creation.
 
 ## Offerings
 

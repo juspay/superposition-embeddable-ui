@@ -1,4 +1,10 @@
-import React from "react";
+import {
+  Tag,
+  TagColor,
+  TagShape,
+  TagSize,
+  TagVariant,
+} from "@juspay/blend-design-system";
 import type { Condition } from "../types";
 
 export interface ConditionBadgesProps {
@@ -6,30 +12,6 @@ export interface ConditionBadgesProps {
   lockedKeys?: string[];
   showConjunction?: boolean;
 }
-
-const badgeStyle: React.CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 6,
-  width: "fit-content",
-  padding: "4px 10px",
-  borderRadius: "var(--sp-inline-radius)",
-  border:
-    "1px solid color-mix(in oklab, var(--sp-color-primary) 15%, var(--sp-color-border))",
-  fontSize: 13,
-  lineHeight: 1.2,
-  fontWeight: 700,
-  background: "color-mix(in oklab, var(--sp-color-primary) 5%, var(--sp-color-panel))",
-  color: "var(--sp-color-text)",
-  marginRight: 4,
-  marginBottom: 4,
-};
-
-const lockedBadgeStyle: React.CSSProperties = {
-  ...badgeStyle,
-  background: "var(--sp-feedback-warning-bg)",
-  color: "var(--sp-feedback-warning-text)",
-};
 
 function formatConditionValue(value: unknown) {
   if (typeof value === "string") return value;
@@ -91,12 +73,15 @@ export function ConditionBadges({
       {entries.map(([key, value]) => {
         const isLocked = lockedKeys.includes(key);
         return (
-          <span key={key} style={isLocked ? lockedBadgeStyle : badgeStyle}>
-            <span style={{ color: "var(--sp-color-muted)", fontWeight: 700 }}>{key}</span>
-            <span style={{ fontWeight: 800 }}>==</span>
-            <span>{formatConditionValue(value)}</span>
-            {isLocked && <LockIcon />}
-          </span>
+          <Tag
+            key={key}
+            text={`${key} == ${formatConditionValue(value)}`}
+            variant={TagVariant.SUBTLE}
+            color={isLocked ? TagColor.WARNING : TagColor.PRIMARY}
+            size={TagSize.SM}
+            shape={TagShape.SQUARICAL}
+            rightSlot={isLocked ? <LockIcon /> : undefined}
+          />
         );
       })}
     </div>
