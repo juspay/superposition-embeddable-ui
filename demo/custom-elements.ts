@@ -1,10 +1,10 @@
 import { defineCustomElements } from "../src/browser";
-import { SUPERPOSITION_FEATURE_LABELS, SUPERPOSITION_FEATURES } from "../src/types";
 import type {
-  SuperpositionFeature,
-  SuperpositionThemeConfig,
-  SuperpositionThemeMode,
+    SuperpositionFeature,
+    SuperpositionThemeConfig,
+    SuperpositionThemeMode,
 } from "../src/types";
+import { SUPERPOSITION_FEATURE_LABELS, SUPERPOSITION_FEATURES } from "../src/types";
 
 interface DemoDraftState {
   host: string;
@@ -12,7 +12,6 @@ interface DemoDraftState {
   workspace: string;
   features: string;
   scopeJson: string;
-  writeScopeJson: string;
   scopeLocked: boolean;
   strict: boolean;
   themeMode: SuperpositionThemeMode;
@@ -35,7 +34,6 @@ const DEFAULT_DRAFT: DemoDraftState = {
   workspace: "dev",
   features: "config,dimensions,overrides",
   scopeJson: '{"region":"us-east-1"}',
-  writeScopeJson: "",
   scopeLocked: true,
   strict: false,
   themeMode: "system",
@@ -140,7 +138,6 @@ function buildConfig(state: DemoDraftState) {
     features,
     scope: {
       context: parseOptionalJsonObject(state.scopeJson),
-      writeContext: parseOptionalJsonObject(state.writeScopeJson),
       locked: state.scopeLocked,
     },
     strict: state.strict,
@@ -261,7 +258,6 @@ async function mount() {
     workspace: String(formData.get("workspace") ?? ""),
     features: String(formData.get("features") ?? ""),
     scopeJson: String(formData.get("scopeJson") ?? ""),
-    writeScopeJson: String(formData.get("writeScopeJson") ?? ""),
     scopeLocked: formData.get("scopeLocked") === "on",
     strict: formData.get("strict") === "on",
     themeMode: String(formData.get("themeMode") ?? "system") as SuperpositionThemeMode,

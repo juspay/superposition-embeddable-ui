@@ -6,6 +6,7 @@ import {
   buttonSecondary,
   ConditionBadges,
   defaultEntryFromSchema,
+  EmptyState,
   FormField,
   inputStyle,
   Modal,
@@ -18,13 +19,13 @@ import { useApi, useMutation } from "../hooks/useApi";
 import { useAlerts } from "../providers/AlertProvider";
 import { useSuperposition } from "../providers/SuperpositionUIProvider";
 import type { ContextOverride, JsonValue, PutContextRequest } from "../types";
-import { contextCanBeEditedInScope } from "../utils/context-filter";
 import {
   filterRecordByPrefix,
   matchesPrefix,
   mergeScopedContext,
   normalizeFilterValues,
 } from "../utils";
+import { contextCanBeEditedInScope } from "../utils/context-filter";
 import {
   canUseFeatureAction,
   FeatureUnavailable,
@@ -37,6 +38,8 @@ export interface OverrideManagerProps {
   /** Restrict overrideable default config keys to one or more prefixes */
   defaultConfigPrefix?: string | string[];
 }
+
+type OverrideContext = NonNullable<PutContextRequest["context"]>;
 
 function filterOverrideValuesByPrefix(
   row: ContextOverride,
@@ -162,6 +165,31 @@ function jsonCellValue(value: JsonValue) {
   return JSON.stringify(value) ?? String(value);
 }
 
+function formatErrorMessage(error: string): string {
+  const apiError = error.match(/^API error (\d+) for .*:\s*(.*)$/);
+  if (!apiError) return error;
+
+  const [, status, detail] = apiError;
+  return detail ? `API error ${status}. ${detail}` : `API error ${status}.`;
+}
+
+function DeleteIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      width="var(--sp-icon-size)"
+      height="var(--sp-icon-size)"
+      style={{ color: "currentColor", flex: "0 0 auto" }}
+    >
+      <path
+        d="M17 6h5v2h-2v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8H2V6h5V3a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v3ZM6 8v12h12V8H6Zm3 3h2v6H9v-6Zm4 0h2v6h-2v-6ZM9 4v2h6V4H9Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
 function InfoBlock({
   icon,
   label,
@@ -208,13 +236,17 @@ function OverrideCard({
   lockedDims,
   canEdit,
   canEditRow,
+  canDelete,
   onEdit,
+  onDelete,
 }: {
   row: ContextOverride;
   lockedDims: string[];
   canEdit: boolean;
   canEditRow: boolean;
+  canDelete: boolean;
   onEdit: (row: ContextOverride) => void;
+  onDelete: (row: ContextOverride) => void;
 }) {
   const [showChangeInfo, setShowChangeInfo] = useState(false);
   const overrideEntries = Object.entries(row.override_);
@@ -277,29 +309,58 @@ function OverrideCard({
             </button>
           </Tooltip>
         </div>
-        {canEdit && canEditRow && (
-          <Tooltip content="Edit override">
-            <button
-              type="button"
-              aria-label={`Edit override ${row.id}`}
-              style={{
-                ...buttonSecondary,
-                width: 40,
-                height: 36,
-                padding: 0,
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: "var(--sp-inline-radius)",
-                borderColor: "var(--sp-color-border)",
-                background: "var(--sp-color-panel)",
-                boxShadow: "none",
-              }}
-              onClick={() => onEdit(row)}
-            >
-              <EditIcon />
-            </button>
-          </Tooltip>
+        {((canEdit && canEditRow) || canDelete) && (
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            {canEdit && canEditRow && (
+              <Tooltip content="Edit override">
+                <button
+                  type="button"
+                  aria-label={`Edit override ${row.id}`}
+                  style={{
+                    ...buttonSecondary,
+                    width: 40,
+                    height: 36,
+                    padding: 0,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: "var(--sp-inline-radius)",
+                    borderColor: "var(--sp-color-border)",
+                    background: "var(--sp-color-panel)",
+                    boxShadow: "none",
+                  }}
+                  onClick={() => onEdit(row)}
+                >
+                  <EditIcon />
+                </button>
+              </Tooltip>
+            )}
+            {canDelete && (
+              <Tooltip content="Delete override">
+                <button
+                  type="button"
+                  aria-label={`Delete override ${row.id}`}
+                  style={{
+                    ...buttonSecondary,
+                    width: 40,
+                    height: 36,
+                    padding: 0,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: "var(--sp-inline-radius)",
+                    color: "var(--sp-form-remove-button-text)",
+                    borderColor: "var(--sp-form-remove-button-border)",
+                    background: "var(--sp-form-remove-button-bg)",
+                    boxShadow: "none",
+                  }}
+                  onClick={() => onDelete(row)}
+                >
+                  <DeleteIcon />
+                </button>
+              </Tooltip>
+            )}
+          </div>
         )}
       </div>
 
@@ -378,7 +439,7 @@ function OverrideCard({
                   style={{
                     padding: "16px 14px",
                     borderBottom: "1px solid var(--sp-color-border)",
-                    fontWeight: 700,
+                    fontWeight: 400,
                   }}
                 >
                   {key}
@@ -390,7 +451,7 @@ function OverrideCard({
                     borderLeft: "1px solid var(--sp-color-border)",
                     boxShadow:
                       "-8px 0 14px -14px color-mix(in oklab, var(--sp-color-text) 45%, transparent)",
-                    fontWeight: 600,
+                    fontWeight: 400,
                     wordBreak: "break-word",
                   }}
                 >
@@ -424,7 +485,7 @@ function OverrideManagerContent({
   defaultConfigPrefix,
 }: OverrideManagerProps) {
   const { overrides, config, scope, defaultConfigs, dimensions } = useSuperposition();
-  const { addAlert } = useAlerts();
+  const { addAlert, confirmAction } = useAlerts();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [showEditor, setShowEditor] = useState(false);
@@ -439,19 +500,12 @@ function OverrideManagerContent({
   const hasScopedContext = Boolean(
     scopedContext && Object.keys(scopedContext).length > 0,
   );
-  const writeContext = config.scope?.writeContext ?? scopedContext;
-  const hasWriteContext = Boolean(
-    writeContext && Object.keys(writeContext).length > 0,
-  );
-  const canCreate =
-    hasWriteContext && canUseFeatureAction(config, "overrides", "create");
-  const canEdit = hasWriteContext && canUseFeatureAction(config, "overrides", "update");
-  const canEditContext =
-    !hasScopedContext && config.capabilities?.overrides?.editContext === true;
+  const canEditContext = config.capabilities?.overrides?.editContext === true;
+  const canCreate = canUseFeatureAction(config, "overrides", "create");
+  const canEdit = canUseFeatureAction(config, "overrides", "update");
+  const canDelete = canUseFeatureAction(config, "overrides", "delete");
   const lockDimensions = config.scope?.locked !== false;
   const lockedDims = lockDimensions ? scope.lockedDimensions : [];
-  const writeLockedDims =
-    lockDimensions && writeContext ? Object.keys(writeContext) : [];
   const defaultConfigPrefixes = useMemo(
     () =>
       normalizeFilterValues(defaultConfigPrefix ?? config.filters?.defaultConfigPrefix),
@@ -465,12 +519,15 @@ function OverrideManagerContent({
 
   const { data, loading, error, refetch } = useApi(
     () =>
-      overrides.list({ page, count: pageSize }, {
-        plaintext: search || undefined,
-        prefix: defaultConfigPrefixes,
-        dimension: scopedContext,
-        dimension_match_strategy: dimensionMatchStrategy,
-      }),
+      overrides.list(
+        { page, count: pageSize },
+        {
+          plaintext: search || undefined,
+          prefix: defaultConfigPrefixes,
+          dimension: scopedContext,
+          dimension_match_strategy: dimensionMatchStrategy,
+        },
+      ),
     [
       defaultConfigPrefixes,
       dimensionMatchStrategy,
@@ -533,12 +590,23 @@ function OverrideManagerContent({
     setShowEditor(true);
   }, []);
 
+  const contextCanBeMutated = useCallback(
+    (context: OverrideContext) => {
+      if (scopedContext) {
+        return contextCanBeEditedInScope(context, scopedContext);
+      }
+
+      return canEdit;
+    },
+    [canEdit, scopedContext],
+  );
+
   const openEditModal = useCallback(
     (row: ContextOverride) => {
-      if (!contextCanBeEditedInScope(row.value, writeContext)) {
+      if (!contextCanBeMutated(row.value)) {
         addAlert(
           "warning",
-          "Only overrides within the active scope can be edited from this view.",
+          "This override cannot be edited from the current scoped view.",
         );
         return;
       }
@@ -555,7 +623,7 @@ function OverrideManagerContent({
       setFormSubmitted(false);
       setShowEditor(true);
     },
-    [addAlert, defaultConfigByKey, writeContext],
+    [addAlert, contextCanBeMutated, defaultConfigByKey],
   );
 
   const closeEditor = useCallback(() => {
@@ -567,6 +635,37 @@ function OverrideManagerContent({
     setNewReason("");
     setFormSubmitted(false);
   }, []);
+
+  const deleteMutation = useMutation(
+    useCallback(
+      async (id: string) => {
+        await overrides.delete(id);
+        addAlert("success", getMessage(config, "overrides.deleted", "Override deleted"));
+      },
+      [overrides, addAlert, config],
+    ),
+  );
+
+  const handleDelete = useCallback(
+    async (row: ContextOverride) => {
+      const confirmed = await confirmAction({
+        title: `Delete override?`,
+        description: "This will permanently remove this override.",
+        confirmLabel: "Delete",
+        cancelLabel: "Cancel",
+        variant: "destructive",
+      });
+      if (!confirmed) return;
+
+      try {
+        await deleteMutation.mutate(row.id);
+        refetch();
+      } catch {
+        addAlert("error", deleteMutation.error || "Failed to delete override");
+      }
+    },
+    [confirmAction, deleteMutation, addAlert, refetch],
+  );
 
   const addContextKey = useCallback(
     (key: string) => {
@@ -609,7 +708,7 @@ function OverrideManagerContent({
     () =>
       Object.fromEntries(
         contextEntries.map((entry) => [entry.key, entry.value]),
-      ) as PutContextRequest["context"],
+      ) as OverrideContext,
     [contextEntries],
   );
 
@@ -620,7 +719,9 @@ function OverrideManagerContent({
       ) as PutContextRequest["override"],
     [overrideEntries],
   );
-  const requiresContextEntries = !editingOverride && canEditContext && !hasScopedContext;
+  const showCreateContextFields =
+    !editingOverride && (!hasScopedContext || canEditContext);
+  const requiresContextEntries = !editingOverride && !hasScopedContext;
 
   const parsedContext = useMemo(() => {
     const invalidEntry = contextEntries.find((entry) => entry.error);
@@ -636,7 +737,7 @@ function OverrideManagerContent({
     }
 
     return { value: contextObject, error: null };
-  }, [contextEntries, contextObject, requiresContextEntries]);
+  }, [contextEntries, contextObject, editingOverride, requiresContextEntries]);
 
   const parsedOverride = useMemo(() => {
     const invalidEntry = overrideEntries.find((entry) => entry.error);
@@ -684,7 +785,7 @@ function OverrideManagerContent({
     try {
       const context =
         editingOverride?.value ??
-        mergeScopedContext(parsedContext.value ?? {}, writeContext);
+        mergeScopedContext(parsedContext.value ?? {}, scopedContext);
       await saveMutation.mutate({
         context,
         override: parsedOverride.value as PutContextRequest["override"],
@@ -713,12 +814,32 @@ function OverrideManagerContent({
   const rows = filteredData;
   const hasRows = rows.length > 0;
   const totalPages = data?.total_pages ?? 0;
+  const trimmedSearch = search.trim();
   const canSave = editingOverride ? canEdit : canCreate;
   const reasonError =
     formSubmitted && !newReason.trim() ? "Enter a reason for this change." : undefined;
   const saveDisabled = !canSave || saveMutation.loading;
-  const editorContext = editingOverride?.value ?? writeContext;
+  const editorContext = editingOverride?.value ?? scopedContext;
   const editorLockedKeys = editorContext ? Object.keys(editorContext) : [];
+  const showSearch = hasRows || Boolean(trimmedSearch);
+  const renderCreateOverrideAction = () =>
+    canCreate ? (
+      <button style={buttonPrimary} onClick={openCreateModal}>
+        {getMessage(config, "overrides.create", "Create override")}
+      </button>
+    ) : undefined;
+  const emptyTitle = trimmedSearch ? "No matching overrides" : "No overrides found";
+  const emptyDescription = trimmedSearch
+    ? "Try a different search term or clear the search field."
+    : hasScopedContext
+      ? "This scoped context does not have any overrides yet."
+      : "Create an override to customize config values for a context.";
+  const emptyAction = trimmedSearch ? (
+    <button style={buttonSecondary} onClick={() => setSearch("")}>
+      Clear search
+    </button>
+  ) : undefined;
+  const errorDescription = error ? formatErrorMessage(error) : undefined;
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
@@ -742,11 +863,7 @@ function OverrideManagerContent({
         >
           Overrides
         </h2>
-        {canCreate && (
-          <button style={buttonPrimary} onClick={openCreateModal}>
-            {getMessage(config, "overrides.create", "Create override")}
-          </button>
-        )}
+        {renderCreateOverrideAction()}
       </div>
 
       {(!canCreate || hasScopedContext) && (
@@ -789,26 +906,28 @@ function OverrideManagerContent({
         </div>
       )}
 
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: 12,
-          flexWrap: "wrap",
-        }}
-      >
-        <SearchField
-          placeholder="Search overrides"
-          value={search}
-          onChange={(nextSearch) => {
-            setSearch(nextSearch);
-            setPage(1);
+      {showSearch && (
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 12,
+            flexWrap: "wrap",
           }}
-        />
-      </div>
+        >
+          <SearchField
+            placeholder="Search overrides"
+            value={search}
+            onChange={(nextSearch) => {
+              setSearch(nextSearch);
+              setPage(1);
+            }}
+          />
+        </div>
+      )}
 
-      {error && (
+      {error && hasRows && (
         <div
           style={{
             padding: "10px 12px",
@@ -836,6 +955,13 @@ function OverrideManagerContent({
         >
           Loading...
         </div>
+      ) : error ? (
+        <EmptyState
+          title="Could not load overrides"
+          description={errorDescription}
+          tone="danger"
+          minHeight="var(--sp-table-empty-min-height)"
+        />
       ) : hasRows ? (
         <div style={{ display: "grid", gap: "var(--sp-space-md)" }}>
           {rows.map((row) => (
@@ -844,35 +970,20 @@ function OverrideManagerContent({
               row={row}
               lockedDims={lockedDims}
               canEdit={canEdit}
-              canEditRow={contextCanBeEditedInScope(row.value, writeContext)}
+              canEditRow={contextCanBeMutated(row.value)}
+              canDelete={canDelete}
               onEdit={openEditModal}
+              onDelete={handleDelete}
             />
           ))}
         </div>
       ) : (
-        <div
-          style={{
-            border: "1px solid var(--sp-color-border)",
-            borderRadius: "var(--sp-card-radius)",
-            background: "var(--sp-color-surface-muted)",
-            padding: "40px 28px",
-            display: "grid",
-            gap: 12,
-            justifyItems: "start",
-          }}
-        >
-          <div
-            style={{
-              padding: "8px 12px",
-              borderRadius: "var(--sp-pill-radius)",
-              background: "var(--sp-feedback-info-bg)",
-              fontSize: 12,
-              fontWeight: 700,
-            }}
-          >
-            No overrides
-          </div>
-        </div>
+        <EmptyState
+          title={emptyTitle}
+          description={emptyDescription}
+          action={emptyAction}
+          minHeight="var(--sp-table-empty-min-height)"
+        />
       )}
 
       {data && hasRows && totalPages > 1 && (
@@ -906,8 +1017,8 @@ function OverrideManagerContent({
           dimensions={dimensionOptions}
           defaultConfigs={defaultConfigOptions}
           lockedScope={editorContext}
-          lockedKeys={editingOverride ? editorLockedKeys : writeLockedDims}
-          showContextFields={!editingOverride && canEditContext}
+          lockedKeys={editingOverride ? editorLockedKeys : lockedDims}
+          showContextFields={showCreateContextFields}
           showOverrideFields={false}
           showValidationErrors={formSubmitted}
           onAddContextKey={addContextKey}
@@ -941,14 +1052,16 @@ function OverrideManagerContent({
             {parsedContext.error}
           </div>
         )}
-        <FormField label="Description">
-          <textarea
-            style={{ ...inputStyle, minHeight: 82, resize: "vertical" }}
-            value={newDesc}
-            onChange={(e) => setNewDesc(e.target.value)}
-            placeholder="Enter a description"
-          />
-        </FormField>
+        <div style={{ paddingTop: "var(--sp-space-sm)" }}>
+          <FormField label="Description">
+            <textarea
+              style={{ ...inputStyle, minHeight: 82, resize: "vertical" }}
+              value={newDesc}
+              onChange={(e) => setNewDesc(e.target.value)}
+              placeholder="Enter a description"
+            />
+          </FormField>
+        </div>
         <FormField label="Reason for Change" required error={reasonError}>
           <textarea
             style={{ ...inputStyle, minHeight: 82, resize: "vertical" }}
@@ -963,7 +1076,7 @@ function OverrideManagerContent({
           dimensions={dimensionOptions}
           defaultConfigs={defaultConfigOptions}
           lockedScope={editorContext}
-          lockedKeys={editingOverride ? editorLockedKeys : writeLockedDims}
+          lockedKeys={editingOverride ? editorLockedKeys : lockedDims}
           showContextFields={false}
           showOverrideFields
           showLockedScope={false}

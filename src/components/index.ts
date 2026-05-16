@@ -1,6 +1,8 @@
 export { AlertBar } from "../providers/AlertProvider";
 export { ConditionBadges } from "./ConditionBadges";
 export type { ConditionBadgesProps } from "./ConditionBadges";
+export { EmptyState } from "./EmptyState";
+export type { EmptyStateProps } from "./EmptyState";
 export {
   FormField,
   buttonDanger,

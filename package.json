@@ -122,6 +122,8 @@
   },
   "license": "Apache-2.0",
   "dependencies": {
+    "@juspay/blend-design-system": "^0.0.36",
+    "lucide-react": "^0.511.0",
     "superposition-sdk": "^0.104.0"
   }
 }

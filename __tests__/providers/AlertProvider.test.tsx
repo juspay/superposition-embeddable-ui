@@ -28,6 +28,7 @@ function TestConfirm() {
           title: "Delete it?",
           description: "This will remove the record.",
           confirmLabel: "Delete",
+          variant: "destructive",
         })
       }
     >
@@ -125,6 +126,23 @@ describe("AlertProvider", () => {
     expect(screen.getByText("Delete it?")).toBeDefined();
     expect(screen.getByText("This will remove the record.")).toBeDefined();
     expect(renderModal).toHaveBeenCalled();
+  });
+
+  it("uses the themed danger action for fallback confirmations", async () => {
+    render(
+      <AlertProvider>
+        <TestConfirm />
+      </AlertProvider>,
+    );
+
+    await act(async () => {
+      screen.getByText("Confirm").click();
+    });
+
+    const deleteButton = screen.getByRole("button", { name: "Delete" });
+    expect(deleteButton).toBeDefined();
+    expect(deleteButton.style.background).toBe("var(--sp-button-danger-bg)");
+    expect(screen.getByText("This will remove the record.")).toBeDefined();
   });
 
   it("throws when used outside provider", () => {

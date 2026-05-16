@@ -6,6 +6,13 @@ import React, {
   useMemo,
   useState,
 } from "react";
+import {
+  FOUNDATION_THEME,
+  Theme as BlendTheme,
+  ThemeProvider as BlendThemeProvider,
+  type ComponentTokenType as BlendComponentTokenType,
+  type ThemeType as BlendThemeType,
+} from "@juspay/blend-design-system";
 import { SuperpositionClient } from "../api/client";
 import { defaultConfigsApi } from "../api/default-configs";
 import { dimensionsApi } from "../api/dimensions";
@@ -71,12 +78,84 @@ function resolveTheme(
   };
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function deepMerge<T>(base: T, ...overrides: unknown[]): T {
+  const output: Record<string, unknown> = { ...(base as Record<string, unknown>) };
+
+  overrides.forEach((override) => {
+    if (!isRecord(override)) return;
+
+    Object.entries(override).forEach(([key, value]) => {
+      const current = output[key];
+      output[key] =
+        isRecord(current) && isRecord(value) ? deepMerge(current, value) : value;
+    });
+  });
+
+  return output as T;
+}
+
+function buildBlendFoundationTokens(tokens?: SuperpositionThemeTokens): BlendThemeType {
+  const colors = tokens?.colors;
+  const legacyColorOverrides = {
+    colors: {
+      gray: {
+        0: colors?.panel,
+        50: colors?.bg,
+        100: colors?.bg,
+        150: colors?.border,
+        200: colors?.border,
+        400: colors?.muted,
+        500: colors?.muted,
+        700: colors?.text,
+        800: colors?.text,
+        900: colors?.text,
+        950: colors?.text,
+      },
+      primary: {
+        50: colors?.primary
+          ? "color-mix(in oklab, var(--sp-color-primary) 10%, white)"
+          : undefined,
+        500: colors?.primary,
+        600: colors?.primary,
+        700: colors?.primary,
+      },
+      red: {
+        500: colors?.danger,
+        600: colors?.danger,
+      },
+      green: {
+        500: colors?.success,
+        600: colors?.success,
+      },
+      yellow: {
+        500: colors?.warning,
+      },
+    },
+  };
+
+  return deepMerge<BlendThemeType>(
+    FOUNDATION_THEME,
+    legacyColorOverrides,
+    tokens?.blend?.foundationTokens,
+  );
+}
+
 function buildThemeVars(
   mode: SuperpositionThemeMode,
   tokens?: SuperpositionThemeTokens,
   layout?: SuperpositionLayoutConfig,
 ): React.CSSProperties {
   const isDark = mode === "dark";
+  const foundation = buildBlendFoundationTokens(tokens);
+  const foundationColors = foundation.colors;
+  const foundationFont = foundation.font;
+  const foundationUnit = foundation.unit;
+  const foundationRadius = foundation.border.radius;
+  const foundationShadow = foundation.shadows;
   const colors = tokens?.colors;
   const radius = tokens?.radius;
   const spacing = tokens?.spacing;
@@ -112,34 +191,31 @@ function buildThemeVars(
 
   return {
     "--sp-color-bg":
-      colors?.bg ?? (isDark ? "oklch(0.21 0.018 282)" : "oklch(0.982 0.007 286)"),
+      colors?.bg ?? (isDark ? foundationColors.gray[950] : foundationColors.gray[50]),
     "--sp-color-panel":
-      colors?.panel ?? (isDark ? "oklch(0.255 0.018 282)" : "oklch(0.995 0.004 286)"),
+      colors?.panel ?? (isDark ? foundationColors.gray[900] : foundationColors.gray[0]),
     "--sp-color-text":
-      colors?.text ?? (isDark ? "oklch(0.95 0.01 286)" : "oklch(0.29 0.022 282)"),
+      colors?.text ?? (isDark ? foundationColors.gray[50] : foundationColors.gray[950]),
     "--sp-color-muted":
-      colors?.muted ?? (isDark ? "oklch(0.72 0.014 282)" : "oklch(0.56 0.018 282)"),
+      colors?.muted ?? (isDark ? foundationColors.gray[400] : foundationColors.gray[500]),
     "--sp-color-border":
-      colors?.border ?? (isDark ? "oklch(0.34 0.016 282)" : "oklch(0.9 0.01 282)"),
-    "--sp-color-primary": colors?.primary ?? "oklch(0.59 0.19 282)",
+      colors?.border ??
+      (isDark ? foundationColors.gray[700] : foundationColors.gray[200]),
+    "--sp-color-primary": colors?.primary ?? foundationColors.primary[500],
     "--sp-color-primary-soft":
       "color-mix(in oklab, var(--sp-color-primary) 10%, var(--sp-color-panel))",
-    "--sp-color-success": colors?.success ?? "oklch(0.69 0.16 154)",
-    "--sp-color-warning": colors?.warning ?? "oklch(0.78 0.15 84)",
-    "--sp-color-danger": colors?.danger ?? "oklch(0.62 0.2 25)",
-    "--sp-shadow-sm":
-      shadow?.sm ??
-      (isDark ? "0 10px 24px rgba(0, 0, 0, 0.22)" : "0 16px 40px rgba(41, 31, 78, 0.08)"),
-    "--sp-shadow-md":
-      shadow?.md ??
-      (isDark ? "0 18px 42px rgba(0, 0, 0, 0.28)" : "0 24px 60px rgba(41, 31, 78, 0.12)"),
-    "--sp-radius-sm": radius?.sm ?? "10px",
-    "--sp-radius-md": radius?.md ?? "14px",
-    "--sp-radius-lg": radius?.lg ?? "22px",
-    "--sp-space-xs": spacing?.xs ?? "8px",
-    "--sp-space-sm": spacing?.sm ?? "12px",
-    "--sp-space-md": spacing?.md ?? "16px",
-    "--sp-space-lg": spacing?.lg ?? "24px",
+    "--sp-color-success": colors?.success ?? foundationColors.green[500],
+    "--sp-color-warning": colors?.warning ?? foundationColors.yellow[500],
+    "--sp-color-danger": colors?.danger ?? foundationColors.red[500],
+    "--sp-shadow-sm": shadow?.sm ?? foundationShadow.xs,
+    "--sp-shadow-md": shadow?.md ?? foundationShadow.md,
+    "--sp-radius-sm": radius?.sm ?? foundationRadius[6],
+    "--sp-radius-md": radius?.md ?? foundationRadius[8],
+    "--sp-radius-lg": radius?.lg ?? foundationRadius[12],
+    "--sp-space-xs": spacing?.xs ?? foundationUnit[4],
+    "--sp-space-sm": spacing?.sm ?? foundationUnit[12],
+    "--sp-space-md": spacing?.md ?? foundationUnit[16],
+    "--sp-space-lg": spacing?.lg ?? foundationUnit[24],
     "--sp-admin-content-min-height": layout?.adminContentMinHeight ?? "620px",
     "--sp-modal-width":
       layout?.modalWidth ?? "min(620px, calc(100vw - (var(--sp-space-lg) * 2)))",
@@ -152,6 +228,7 @@ function buildThemeVars(
     "--sp-alert-min-width":
       layout?.alertMinWidth ?? "min(300px, calc(100vw - (var(--sp-space-lg) * 2)))",
     "--sp-table-min-width": layout?.tableMinWidth ?? "720px",
+    "--sp-table-empty-min-height": layout?.tableEmptyMinHeight ?? "168px",
     "--sp-table-opacity": table?.opacity ?? "1",
     "--sp-compact-control-padding":
       layout?.compactControlPadding ?? "calc(var(--sp-space-xs) / 2) var(--sp-space-xs)",
@@ -171,24 +248,21 @@ function buildThemeVars(
       tableHeader?.bgColor ?? table?.bgColor ?? "var(--sp-color-surface-muted)",
     "--sp-table-header-text":
       tableHeader?.textColor ?? table?.textColor ?? "var(--sp-color-text)",
-    "--sp-table-header-font-size": tableHeader?.fontSize ?? table?.fontSize ?? "0.88rem",
+    "--sp-table-header-font-size": tableHeader?.fontSize ?? table?.fontSize ?? "12px",
     "--sp-table-header-font-weight":
-      tableHeader?.fontWeight ?? table?.fontWeight ?? "700",
+      tableHeader?.fontWeight ?? table?.fontWeight ?? "600",
     "--sp-table-header-text-transform":
-      tableHeader?.textTransform ?? table?.textTransform ?? "none",
+      tableHeader?.textTransform ?? table?.textTransform ?? "uppercase",
     "--sp-table-header-padding":
       tableHeader?.padding ?? table?.padding ?? "var(--sp-space-sm) var(--sp-space-md)",
     "--sp-table-header-opacity": tableHeader?.opacity ?? "1",
     "--sp-button-primary-bg":
       buttonPrimary?.bgColor ?? button?.bgColor ?? "var(--sp-color-primary)",
     "--sp-button-primary-text":
-      buttonPrimary?.textColor ?? button?.textColor ?? "var(--sp-color-panel)",
+      buttonPrimary?.textColor ?? button?.textColor ?? foundationColors.gray[0],
     "--sp-button-primary-border":
       buttonPrimary?.borderColor ?? button?.borderColor ?? "transparent",
-    "--sp-button-primary-shadow":
-      buttonPrimary?.shadow ??
-      button?.shadow ??
-      "0 12px 24px color-mix(in oklab, var(--sp-button-primary-bg) 18%, transparent)",
+    "--sp-button-primary-shadow": buttonPrimary?.shadow ?? button?.shadow ?? "none",
     "--sp-button-secondary-bg":
       buttonSecondary?.bgColor ?? button?.bgColor ?? "var(--sp-color-panel)",
     "--sp-button-secondary-text":
@@ -208,13 +282,14 @@ function buildThemeVars(
       button?.borderColor ??
       "color-mix(in oklab, var(--sp-color-danger) 28%, var(--sp-color-border))",
     "--sp-button-disabled-opacity": button?.disabledOpacity ?? "0.56",
-    "--sp-button-padding": button?.padding ?? "var(--sp-space-sm) var(--sp-space-md)",
+    "--sp-button-padding":
+      button?.padding ?? `${foundationUnit[8]} ${foundationUnit[12]}`,
     "--sp-button-radius": button?.borderRadius ?? "var(--sp-control-radius)",
-    "--sp-button-font-size": button?.fontSize ?? "1rem",
-    "--sp-button-font-weight": button?.fontWeight ?? "700",
-    "--sp-icon-size": icon?.size ?? "16px",
+    "--sp-button-font-size": button?.fontSize ?? foundationFont.fontSize[14],
+    "--sp-button-font-weight": button?.fontWeight ?? foundationFont.weight[500],
+    "--sp-icon-size": icon?.size ?? foundationUnit[16],
     "--sp-icon-color": icon?.color ?? "var(--sp-color-muted)",
-    "--sp-lock-icon-size": lockIcon?.size ?? icon?.size ?? "14px",
+    "--sp-lock-icon-size": lockIcon?.size ?? icon?.size ?? foundationUnit[14],
     "--sp-lock-icon-color": lockIcon?.color ?? icon?.color ?? "var(--sp-color-muted)",
     "--sp-json-value-bg": jsonValue?.bgColor ?? "var(--sp-color-surface-subtle)",
     "--sp-json-value-border": jsonValue?.borderColor ?? "var(--sp-color-border)",
@@ -225,15 +300,19 @@ function buildThemeVars(
     "--sp-form-label-font-weight": formLabel?.fontWeight ?? form?.fontWeight ?? "700",
     "--sp-form-helper-color": form?.helperTextColor ?? "var(--sp-color-muted)",
     "--sp-form-remove-button-bg":
-      formRemoveButton?.bgColor ?? "var(--sp-button-primary-bg)",
+      formRemoveButton?.bgColor ??
+      (isDark ? foundationColors.red[950] : foundationColors.red[50]),
     "--sp-form-remove-button-text":
-      formRemoveButton?.textColor ?? "var(--sp-button-primary-text)",
+      formRemoveButton?.textColor ??
+      (isDark ? foundationColors.red[300] : foundationColors.red[600]),
     "--sp-form-remove-button-border":
-      formRemoveButton?.borderColor ?? "var(--sp-button-primary-border)",
+      formRemoveButton?.borderColor ??
+      (isDark ? foundationColors.red[800] : foundationColors.red[200]),
     "--sp-form-remove-button-radius":
-      formRemoveButton?.borderRadius ?? "var(--sp-button-radius)",
-    "--sp-form-remove-button-width": formRemoveButton?.width ?? "44px",
-    "--sp-form-remove-button-height": formRemoveButton?.height ?? "44px",
+      formRemoveButton?.borderRadius ?? "var(--sp-radius-md)",
+    "--sp-form-remove-button-width": formRemoveButton?.width ?? "32px",
+    "--sp-form-remove-button-height": formRemoveButton?.height ?? "32px",
+    "--sp-form-remove-button-icon-size": formRemoveButton?.fontSize ?? foundationUnit[16],
     "--sp-form-remove-button-shadow": formRemoveButton?.shadow ?? "none",
     "--sp-search-bg": search?.bgColor ?? "var(--sp-control-bg)",
     "--sp-search-text": search?.textColor ?? "var(--sp-control-text)",
@@ -242,10 +321,10 @@ function buildThemeVars(
     "--sp-search-border": search?.borderColor ?? "var(--sp-control-border)",
     "--sp-search-radius": search?.borderRadius ?? "var(--sp-control-radius)",
     "--sp-search-padding": search?.padding ?? "var(--sp-space-sm) var(--sp-space-md)",
-    "--sp-search-width": search?.width ?? "min(340px, 100%)",
-    "--sp-search-height": search?.height ?? "auto",
-    "--sp-search-font-size": search?.fontSize ?? "1rem",
-    "--sp-search-font-weight": search?.fontWeight ?? "500",
+    "--sp-search-width": search?.width ?? "min(360px, 100%)",
+    "--sp-search-height": search?.height ?? "40px",
+    "--sp-search-font-size": search?.fontSize ?? foundationFont.fontSize[14],
+    "--sp-search-font-weight": search?.fontWeight ?? foundationFont.weight[400],
     "--sp-search-shadow": search?.shadow ?? "none",
     "--sp-search-opacity": search?.opacity ?? "1",
     "--sp-search-hover-bg": search?.hoverBgColor ?? "var(--sp-search-bg)",
@@ -255,12 +334,10 @@ function buildThemeVars(
     "--sp-search-focus-bg": search?.focusBgColor ?? "var(--sp-search-hover-bg)",
     "--sp-search-focus-text": search?.focusTextColor ?? "var(--sp-search-hover-text)",
     "--sp-search-focus-border": search?.focusBorderColor ?? "var(--sp-color-primary)",
-    "--sp-search-focus-shadow":
-      search?.focusShadow ??
-      "0 0 0 3px color-mix(in oklab, var(--sp-color-primary) 18%, transparent)",
+    "--sp-search-focus-shadow": search?.focusShadow ?? foundationShadow.focusPrimary,
     "--sp-search-focus-outline": search?.focusOutline ?? "none",
     "--sp-search-focus-outline-offset": search?.focusOutlineOffset ?? "0",
-    "--sp-search-icon-size": searchIcon?.size ?? icon?.size ?? "18px",
+    "--sp-search-icon-size": searchIcon?.size ?? icon?.size ?? foundationUnit[18],
     "--sp-search-icon-color": searchIcon?.color ?? icon?.color ?? "var(--sp-color-muted)",
     "--sp-search-hover-icon-color":
       search?.hoverIconColor ?? "var(--sp-search-icon-color)",
@@ -296,10 +373,10 @@ function buildThemeVars(
       "color-mix(in oklab, var(--sp-color-text) 18%, transparent)",
     "--sp-tooltip-radius": tooltip?.borderRadius ?? "var(--sp-inline-radius)",
     "--sp-tooltip-shadow": tooltip?.shadow ?? "var(--sp-shadow-sm)",
-    "--sp-tooltip-font-size": tooltip?.fontSize ?? "12px",
+    "--sp-tooltip-font-size": tooltip?.fontSize ?? foundationFont.fontSize[12],
     "--sp-page-title-text": pageTitle?.textColor ?? "var(--sp-color-text)",
-    "--sp-page-title-font-size": pageTitle?.fontSize ?? "24px",
-    "--sp-page-title-font-weight": pageTitle?.fontWeight ?? "700",
+    "--sp-page-title-font-size": pageTitle?.fontSize ?? foundationFont.fontSize[24],
+    "--sp-page-title-font-weight": pageTitle?.fontWeight ?? foundationFont.weight[700],
     "--sp-page-title-margin": pageTitle?.margin ?? "0",
     "--sp-banner-bg":
       bannerWarning?.bgColor ?? banner?.bgColor ?? "var(--sp-feedback-warning-bg)",
@@ -311,9 +388,14 @@ function buildThemeVars(
       "var(--sp-feedback-warning-border)",
     "--sp-banner-radius":
       bannerWarning?.borderRadius ?? banner?.borderRadius ?? "var(--sp-control-radius)",
-    "--sp-banner-padding": bannerWarning?.padding ?? banner?.padding ?? "12px 14px",
-    "--sp-banner-font-size": bannerWarning?.fontSize ?? banner?.fontSize ?? "13px",
-    "--sp-banner-font-weight": bannerWarning?.fontWeight ?? banner?.fontWeight ?? "500",
+    "--sp-banner-padding":
+      bannerWarning?.padding ??
+      banner?.padding ??
+      `${foundationUnit[12]} ${foundationUnit[14]}`,
+    "--sp-banner-font-size":
+      bannerWarning?.fontSize ?? banner?.fontSize ?? foundationFont.fontSize[14],
+    "--sp-banner-font-weight":
+      bannerWarning?.fontWeight ?? banner?.fontWeight ?? foundationFont.weight[500],
     "--sp-toast-bg": toast?.bgColor ?? "var(--sp-color-panel)",
     "--sp-toast-text": toast?.textColor ?? "var(--sp-color-text)",
     "--sp-toast-border": toast?.borderColor ?? "var(--sp-color-border)",
@@ -366,8 +448,9 @@ function buildThemeVars(
       "color-mix(in oklab, var(--sp-color-muted) 22%, var(--sp-color-border))",
     fontFamily:
       typography?.fontFamily ??
-      '-apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif',
-    fontSize: typography?.fontSize ?? "14px",
+      foundationFont.family.body ??
+      'InterDisplay, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif',
+    fontSize: typography?.fontSize ?? foundationFont.fontSize[14],
     color: "var(--sp-color-text)",
   } as React.CSSProperties;
 }
@@ -392,6 +475,23 @@ export function useSuperpositionTheme(): SuperpositionThemeValue {
     );
   }
   return ctx;
+}
+
+export function useOptionalSuperpositionTheme(): SuperpositionThemeValue | null {
+  return useContext(ThemeContext);
+}
+
+export function useOptionalSuperpositionThemeStyles(): React.CSSProperties | undefined {
+  const ctx = useContext(SuperpositionContext);
+  const themeValue = useContext(ThemeContext);
+
+  return useMemo(
+    () =>
+      themeValue
+        ? buildThemeVars(themeValue.resolvedMode, themeValue.tokens, ctx?.config.layout)
+        : undefined,
+    [ctx?.config.layout, themeValue],
+  );
 }
 
 export interface SuperpositionUIProviderProps {
@@ -480,17 +580,34 @@ export function SuperpositionUIProvider({
     () => buildThemeVars(themeValue.resolvedMode, themeValue.tokens, config.layout),
     [config.layout, themeValue.resolvedMode, themeValue.tokens],
   );
+  const blendFoundationTokens = useMemo(
+    () => buildBlendFoundationTokens(themeValue.tokens),
+    [themeValue.tokens],
+  );
+  const blendComponentTokens = useMemo(
+    () =>
+      themeValue.tokens?.blend?.componentTokens as BlendComponentTokenType | undefined,
+    [themeValue.tokens],
+  );
+  const blendTheme =
+    themeValue.resolvedMode === "dark" ? BlendTheme.DARK : BlendTheme.LIGHT;
 
   return (
     <SuperpositionContext.Provider value={value}>
       <ThemeContext.Provider value={themeValue}>
-        <div
-          className="sp-ui"
-          data-sp-theme={themeValue.resolvedMode}
-          style={themeStyles}
+        <BlendThemeProvider
+          theme={blendTheme}
+          foundationTokens={blendFoundationTokens}
+          componentTokens={blendComponentTokens}
         >
-          {children}
-        </div>
+          <div
+            className="sp-ui"
+            data-sp-theme={themeValue.resolvedMode}
+            style={themeStyles}
+          >
+            {children}
+          </div>
+        </BlendThemeProvider>
       </ThemeContext.Provider>
     </SuperpositionContext.Provider>
   );

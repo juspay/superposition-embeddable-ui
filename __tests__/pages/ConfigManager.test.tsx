@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ConfigManager } from "../../src/pages/ConfigManager";
 import { AlertProvider } from "../../src/providers/AlertProvider";
@@ -175,18 +175,21 @@ describe("ConfigManager", () => {
     );
 
     fireEvent.click(await screen.findByText("Create config"));
-    fireEvent.change(screen.getByLabelText("Key*"), {
+    const dialog = within(
+      await screen.findByRole("dialog", { name: "Create Default Config" }),
+    );
+    fireEvent.change(dialog.getByLabelText("Key*"), {
       target: { value: "key1" },
     });
-    fireEvent.change(screen.getByLabelText("Value*"), {
+    fireEvent.change(dialog.getByLabelText("Value*"), {
       target: { value: "value1" },
     });
-    fireEvent.change(screen.getByLabelText("Change Reason*"), {
+    fireEvent.change(dialog.getByLabelText("Change Reason*"), {
       target: { value: "test reason" },
     });
 
     expect(screen.getByText(/Plain text is stored as a string/i)).toBeDefined();
-    expect(screen.getByText("Create")).not.toBeDisabled();
+    expect(dialog.getByText("Create")).not.toBeDisabled();
   });
 
   it("creates a config when plain text value is entered", async () => {
@@ -230,20 +233,23 @@ describe("ConfigManager", () => {
     );
 
     fireEvent.click(await screen.findByText("Create config"));
-    fireEvent.change(screen.getByLabelText("Key*"), {
+    const dialog = within(
+      await screen.findByRole("dialog", { name: "Create Default Config" }),
+    );
+    fireEvent.change(dialog.getByLabelText("Key*"), {
       target: { value: "key1" },
     });
-    fireEvent.change(screen.getByLabelText("Value*"), {
+    fireEvent.change(dialog.getByLabelText("Value*"), {
       target: { value: "value1" },
     });
-    fireEvent.change(screen.getByLabelText("Description"), {
+    fireEvent.change(dialog.getByLabelText("Description"), {
       target: { value: "desc" },
     });
-    fireEvent.change(screen.getByLabelText("Change Reason*"), {
+    fireEvent.change(dialog.getByLabelText("Change Reason*"), {
       target: { value: "test reason" },
     });
 
-    fireEvent.click(screen.getByText("Create"));
+    fireEvent.click(dialog.getByText("Create"));
 
     await waitFor(() => {
       expect(mockFetch).toHaveBeenCalledWith(

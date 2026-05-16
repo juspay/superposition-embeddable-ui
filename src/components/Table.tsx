@@ -1,5 +1,11 @@
 import React from "react";
+import {
+  ColumnType,
+  DataTable,
+  type ColumnDefinition,
+} from "@juspay/blend-design-system";
 import type { SuperpositionTableConfig } from "../types";
+import { EmptyState } from "./EmptyState";
 
 export interface Column<T> {
   key: string;
@@ -15,6 +21,7 @@ export interface TableProps<T> {
   keyExtractor: (row: T) => string;
   onRowClick?: (row: T) => void;
   emptyMessage?: string;
+  emptyDescription?: string;
   loading?: boolean;
   showSerialNumber?: boolean;
   serialNumberHeader?: string;
@@ -64,26 +71,6 @@ const tableStyle: React.CSSProperties = {
   opacity: "var(--sp-table-opacity)",
 };
 
-const thStyle: React.CSSProperties = {
-  textAlign: "left",
-  padding: "var(--sp-table-header-padding)",
-  borderBottom: "1px solid var(--sp-color-border)",
-  fontWeight: "var(--sp-table-header-font-weight)",
-  color: "var(--sp-table-header-text)",
-  background: "var(--sp-table-header-bg)",
-  fontSize: "var(--sp-table-header-font-size)",
-  letterSpacing: 0,
-  textTransform: "var(--sp-table-header-text-transform)",
-  opacity: "var(--sp-table-header-opacity)",
-};
-
-const tdStyle: React.CSSProperties = {
-  padding: "var(--sp-space-md)",
-  borderBottom: "1px solid color-mix(in oklab, var(--sp-color-border) 75%, transparent)",
-  color: "var(--sp-color-text)",
-  verticalAlign: "top",
-};
-
 function toTitleCase(value: string) {
   if (!value.trim()) return value;
 
@@ -108,27 +95,100 @@ export function Table<T>({
   keyExtractor,
   onRowClick,
   emptyMessage = "No data",
+  emptyDescription,
   loading = false,
   showSerialNumber = false,
   serialNumberHeader = "#",
   serialNumberStart = 1,
   serialNumberWidth = "64px",
-  serialNumberAlign = "center",
+  serialNumberAlign = "left",
 }: TableProps<T>) {
+  type TableRow = Record<string, unknown> & {
+    __spId: string;
+    __spRow: T;
+    __spSerial?: number;
+  };
+
   if (loading) {
     return (
-      <div
-        style={{
-          padding: "calc(var(--sp-space-lg) * 2)",
-          textAlign: "center",
-          color: "var(--sp-color-muted)",
-          border: "1px solid var(--sp-color-border)",
-          borderRadius: "var(--sp-card-radius)",
-          background: "var(--sp-color-panel)",
-        }}
-      >
-        Loading...
+      <div>
+        <span
+          style={{
+            position: "absolute",
+            width: 1,
+            height: 1,
+            padding: 0,
+            margin: -1,
+            overflow: "hidden",
+            clip: "rect(0 0 0 0)",
+            whiteSpace: "nowrap",
+            border: 0,
+          }}
+        >
+          Loading...
+        </span>
+        <DataTable idField="__spId" columns={[]} data={[]} isLoading />
       </div>
+    );
+  }
+
+  const tableRows: TableRow[] = data.map((row, index) => ({
+    __spId: keyExtractor(row),
+    __spRow: row,
+    __spSerial: serialNumberStart + index,
+  }));
+
+  const blendColumns: ColumnDefinition<Record<string, unknown>>[] = [
+    ...(showSerialNumber
+      ? [
+          {
+            field: "__spSerial" as keyof TableRow,
+            header: serialNumberHeader,
+            width: serialNumberWidth,
+            type: ColumnType.CUSTOM,
+            isSortable: false,
+            renderCell: (value: unknown) => (
+              <span
+                style={{
+                  display: "block",
+                  width: "100%",
+                  textAlign: serialNumberAlign,
+                }}
+              >
+                {String(value ?? "")}
+              </span>
+            ),
+          } satisfies ColumnDefinition<Record<string, unknown>>,
+        ]
+      : []),
+    ...columns.map(
+      (col) =>
+        ({
+          field: col.key as keyof TableRow,
+          header: toTitleCase(col.header),
+          width: col.width,
+          type: ColumnType.CUSTOM,
+          isSortable: false,
+          renderCell: (_value: unknown, tableRow: Record<string, unknown>) => (
+            <span style={{ display: "block", textAlign: col.align ?? "left" }}>
+              {col.render
+                ? col.render(tableRow.__spRow as T)
+                : String(
+                    (tableRow.__spRow as T as Record<string, unknown>)[col.key] ?? "",
+                  )}
+            </span>
+          ),
+        }) satisfies ColumnDefinition<Record<string, unknown>>,
+    ),
+  ];
+
+  if (data.length === 0) {
+    return (
+      <EmptyState
+        title={emptyMessage}
+        description={emptyDescription}
+        minHeight="var(--sp-table-empty-min-height)"
+      />
     );
   }
 
@@ -141,83 +201,23 @@ export function Table<T>({
         background: "var(--sp-color-panel)",
       }}
     >
-      <table style={tableStyle}>
-        <thead>
-          <tr>
-            {showSerialNumber && (
-              <th
-                style={{
-                  ...thStyle,
-                  width: serialNumberWidth,
-                  textAlign: serialNumberAlign,
-                }}
-              >
-                {serialNumberHeader}
-              </th>
-            )}
-            {columns.map((col) => (
-              <th
-                key={col.key}
-                style={{ ...thStyle, width: col.width, textAlign: col.align ?? "left" }}
-              >
-                {toTitleCase(col.header)}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {data.length === 0 ? (
-            <tr>
-              <td
-                colSpan={columns.length + (showSerialNumber ? 1 : 0)}
-                style={{
-                  ...tdStyle,
-                  textAlign: "center",
-                  color: "var(--sp-color-muted)",
-                  padding: "calc(var(--sp-space-lg) * 2) var(--sp-space-lg)",
-                  fontSize: "1rem",
-                }}
-              >
-                {emptyMessage}
-              </td>
-            </tr>
-          ) : (
-            data.map((row, index) => (
-              <tr
-                key={keyExtractor(row)}
-                onClick={() => onRowClick?.(row)}
-                style={{
-                  cursor: onRowClick ? "pointer" : "default",
-                }}
-              >
-                {showSerialNumber && (
-                  <td
-                    style={{
-                      ...tdStyle,
-                      width: serialNumberWidth,
-                      textAlign: serialNumberAlign,
-                      color: "var(--sp-color-muted)",
-                      fontWeight: 700,
-                    }}
-                  >
-                    {serialNumberStart + index}
-                  </td>
-                )}
-                {columns.map((col) => (
-                  <td
-                    key={col.key}
-                    style={{ ...tdStyle, textAlign: col.align ?? "left" }}
-                  >
-                    {col.render
-                      ? col.render(row)
-                      : String((row as Record<string, unknown>)[col.key] ?? "")}
-                  </td>
-                ))}
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+      <div style={tableStyle}>
+        <DataTable
+          idField="__spId"
+          columns={blendColumns}
+          data={tableRows}
+          showHeader={false}
+          showToolbar={false}
+          showSettings={false}
+          showFooter={false}
+          isHoverable={Boolean(onRowClick)}
+          onRowClick={
+            onRowClick ? (tableRow) => onRowClick(tableRow.__spRow as T) : undefined
+          }
+          getRowStyle={() => ({ cursor: onRowClick ? "pointer" : "default" })}
+          mobileColumnsToShow={blendColumns.length}
+        />
+      </div>
     </div>
   );
 }

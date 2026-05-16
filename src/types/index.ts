@@ -1,3 +1,7 @@
+import type {
+  ComponentTokenType as BlendComponentTokenType,
+  ThemeType as BlendThemeType,
+} from "@juspay/blend-design-system";
 import type React from "react";
 import type { JsonValue } from "./api";
 export * from "./api";
@@ -116,6 +120,15 @@ export interface SuperpositionSearchThemeConfig extends SuperpositionStyleConfig
   icon?: SuperpositionIconThemeConfig;
 }
 
+export type SuperpositionDeepPartial<T> = {
+  [Key in keyof T]?: T[Key] extends object ? SuperpositionDeepPartial<T[Key]> : T[Key];
+};
+
+export interface SuperpositionBlendThemeConfig {
+  foundationTokens?: SuperpositionDeepPartial<BlendThemeType>;
+  componentTokens?: SuperpositionDeepPartial<BlendComponentTokenType>;
+}
+
 export interface SuperpositionTableSerialNumberConfig {
   enabled?: boolean;
   header?: string;
@@ -191,6 +204,7 @@ export interface SuperpositionThemeTokens {
   pageTitle?: SuperpositionStyleConfig;
   jsonValue?: SuperpositionStyleConfig;
   tooltip?: SuperpositionStyleConfig;
+  blend?: SuperpositionBlendThemeConfig;
 }
 
 export interface SuperpositionThemeConfig extends SuperpositionThemeTokens {
@@ -199,7 +213,6 @@ export interface SuperpositionThemeConfig extends SuperpositionThemeTokens {
 
 export interface SuperpositionScopeConfig {
   context?: Record<string, JsonValue>;
-  writeContext?: Record<string, JsonValue>;
   locked?: boolean;
 }
 
@@ -258,6 +271,7 @@ export interface SuperpositionLayoutConfig {
   confirmWidth?: string;
   alertMinWidth?: string;
   tableMinWidth?: string;
+  tableEmptyMinHeight?: string;
   compactControlPadding?: string;
 }
 

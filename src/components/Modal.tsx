@@ -1,6 +1,10 @@
-import React, { useEffect, useRef } from "react";
-import { createPortal } from "react-dom";
-import { useOptionalSuperposition } from "../providers/SuperpositionUIProvider";
+import React from "react";
+import { Modal as BlendModal } from "@juspay/blend-design-system";
+import {
+  useOptionalSuperposition,
+  useOptionalSuperpositionTheme,
+  useOptionalSuperpositionThemeStyles,
+} from "../providers/SuperpositionUIProvider";
 
 export interface ModalProps {
   open: boolean;
@@ -10,43 +14,19 @@ export interface ModalProps {
   footer?: React.ReactNode;
 }
 
-const overlayStyle: React.CSSProperties = {
-  position: "fixed",
-  inset: 0,
-  background: "var(--sp-color-overlay)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: "var(--sp-space-lg)",
-};
+type BlendModalWithContainerEvents = React.ComponentType<
+  React.ComponentProps<typeof BlendModal> & {
+    onClick?: React.MouseEventHandler<HTMLDivElement>;
+  }
+>;
 
-const dialogStyle: React.CSSProperties = {
-  background: "var(--sp-color-panel)",
-  borderRadius: "var(--sp-card-radius)",
-  border: "1px solid var(--sp-color-border)",
-  padding: 0,
-  minWidth: "var(--sp-modal-min-width)",
-  maxWidth: "var(--sp-modal-max-width)",
-  maxHeight: "var(--sp-modal-max-height)",
-  width: "var(--sp-modal-width)",
-  display: "flex",
-  flexDirection: "column",
-  boxShadow: "var(--sp-shadow-md)",
-};
+const ClickableBlendModal = BlendModal as BlendModalWithContainerEvents;
 
 export function Modal({ open, onClose, title, children, footer }: ModalProps) {
-  const ref = useRef<HTMLDivElement>(null);
   const context = useOptionalSuperposition();
   const ui = context?.config.ui;
-
-  useEffect(() => {
-    if (!open) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [open, onClose]);
+  const themeStyles = useOptionalSuperpositionThemeStyles();
+  const theme = useOptionalSuperpositionTheme();
 
   if (!open) return null;
 
@@ -64,77 +44,51 @@ export function Modal({ open, onClose, title, children, footer }: ModalProps) {
     );
   }
 
-  const overlay = (
-    <div style={{ ...overlayStyle, zIndex: ui?.modalZIndex ?? 10000 }} onClick={onClose}>
+  return (
+    <ClickableBlendModal
+      isOpen={open}
+      onClose={onClose}
+      title={title}
+      isCustom
+      closeOnBackdropClick
+      useDrawerOnMobile
+      minWidth="var(--sp-modal-min-width)"
+      maxWidth="var(--sp-modal-max-width)"
+      maxHeight="var(--sp-modal-max-height)"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
       <div
-        ref={ref}
-        style={dialogStyle}
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        onClick={(e) => e.stopPropagation()}
+        className="sp-ui"
+        data-sp-theme={theme?.resolvedMode}
+        style={{
+          ...themeStyles,
+          width: "var(--sp-modal-width)",
+          maxWidth: "var(--sp-modal-max-width)",
+          maxHeight: "var(--sp-modal-max-height)",
+          display: "flex",
+          flexDirection: "column",
+          background: "var(--sp-color-panel)",
+        }}
       >
-        <div
-          style={{
-            padding: "var(--sp-space-md) var(--sp-space-lg)",
-            borderBottom: "1px solid var(--sp-color-border)",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <h3
-            style={{
-              margin: 0,
-              fontSize: "1.15rem",
-              fontWeight: 700,
-              color: "var(--sp-color-text)",
-            }}
-          >
-            {title}
-          </h3>
-          <button
-            onClick={onClose}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              fontSize: "1.4rem",
-              padding: 0,
-              lineHeight: 1,
-              color: "var(--sp-icon-color)",
-            }}
-            aria-label="Close"
-          >
-            ×
-          </button>
-        </div>
-        <div style={{ padding: "var(--sp-space-lg)", overflowY: "auto", flex: 1 }}>
-          {children}
-        </div>
+        <div style={{ padding: 24, overflowY: "auto", flex: 1 }}>{children}</div>
         {footer && (
           <div
             style={{
-              padding: "var(--sp-space-md) var(--sp-space-lg)",
+              padding: "20px 24px",
               borderTop: "1px solid var(--sp-color-border)",
               display: "flex",
               justifyContent: "flex-end",
-              gap: "var(--sp-space-sm)",
+              gap: 12,
             }}
           >
             {footer}
           </div>
         )}
       </div>
-    </div>
+    </ClickableBlendModal>
   );
-
-  const portalTarget =
-    typeof ui?.portalContainer === "function"
-      ? ui.portalContainer()
-      : typeof ui?.portalContainer === "string"
-        ? document.querySelector(ui.portalContainer)
-        : ui?.portalContainer;
-
-  return portalTarget ? createPortal(overlay, portalTarget) : overlay;
 }

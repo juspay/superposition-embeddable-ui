@@ -76,22 +76,31 @@ describe("contextCanBeEditedInScope", () => {
     ).toBe(true);
   });
 
-  it("matches when the condition is a subset of the active scope", () => {
+  it("does not match a condition that is missing a scoped dimension", () => {
     expect(
       contextCanBeEditedInScope(
         { region: "us-east-1" },
-        { region: "us-east-1", merchant: "m_123", profile: "p_123" },
+        { region: "us-east-1", merchant: "m_123" },
+      ),
+    ).toBe(false);
+  });
+
+  it("matches when condition has all scoped dimensions with matching values", () => {
+    expect(
+      contextCanBeEditedInScope(
+        { merchant: "m_123", region: "us-east-1" },
+        { merchant: "m_123" },
       ),
     ).toBe(true);
   });
 
-  it("does not match when the condition has dimensions outside the active scope", () => {
+  it("matches when condition has extra dimensions beyond the scope", () => {
     expect(
       contextCanBeEditedInScope(
         { region: "us-east-1", env: "prod" },
         { region: "us-east-1" },
       ),
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it("does not match global conditions for scoped editing", () => {

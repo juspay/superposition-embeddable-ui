@@ -1,284 +1,255 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Superposition Embeddable UI — Custom Elements Demo</title>
-    <style>
-      * {
-        box-sizing: border-box;
-      }
 
-      body {
-        margin: 0;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        background: #f3f4f6;
-        color: #111827;
-      }
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Superposition Embeddable UI — Custom Elements Demo</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
 
-      header {
-        background: #042f2e;
-        color: white;
-        padding: 16px 24px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f3f4f6;
+      color: #111827;
+    }
 
-      header a {
-        color: #99f6e4;
-        text-decoration: none;
-        font-size: 13px;
-      }
+    header {
+      background: #042f2e;
+      color: white;
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
 
-      .toolbar {
-        background: white;
-        border-bottom: 1px solid #e5e7eb;
-        padding: 12px 24px;
-        display: flex;
-        gap: 12px;
-        flex-wrap: wrap;
-        align-items: center;
-      }
+    header a {
+      color: #99f6e4;
+      text-decoration: none;
+      font-size: 13px;
+    }
 
-      .toolbar label {
-        font-size: 13px;
-        font-weight: 600;
-        color: #374151;
-      }
+    .toolbar {
+      background: white;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 12px 24px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
 
-      .toolbar .toolbar-label {
-        font-size: 13px;
-        font-weight: 600;
-        color: #374151;
-      }
+    .toolbar label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #374151;
+    }
 
-      .toolbar input,
-      .toolbar select {
-        font-size: 13px;
-        padding: 6px 10px;
-        border: 1px solid #d1d5db;
-        border-radius: 6px;
-        background: white;
-      }
+    .toolbar .toolbar-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #374151;
+    }
 
-      .toolbar button {
-        font-size: 13px;
-        padding: 8px 16px;
-        border: none;
-        border-radius: 6px;
-        background: #0f766e;
-        color: white;
-        cursor: pointer;
-        font-weight: 600;
-      }
+    .toolbar input,
+    .toolbar select {
+      font-size: 13px;
+      padding: 6px 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      background: white;
+    }
 
-      .toolbar-chip {
-        padding: 6px 10px;
-        border-radius: 999px;
-        font-size: 12px;
-        background: #ecfeff;
-        border: 1px solid #a5f3fc;
-        color: #0f766e;
-        font-weight: 600;
-      }
+    .toolbar button {
+      font-size: 13px;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      background: #0f766e;
+      color: white;
+      cursor: pointer;
+      font-weight: 600;
+    }
 
-      .feature-picker {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-        align-items: center;
-      }
+    .toolbar-chip {
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      background: #ecfeff;
+      border: 1px solid #a5f3fc;
+      color: #0f766e;
+      font-weight: 600;
+    }
 
-      .feature-picker label {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-      }
+    .feature-picker {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
 
-      #status {
-        font-size: 13px;
-        padding: 8px 16px;
-        border-radius: 6px;
-        margin: 12px 24px;
-        display: none;
-      }
+    .feature-picker label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
 
-      #status.error {
-        display: block;
-        background: #fef2f2;
-        color: #991b1b;
-        border: 1px solid #fecaca;
-      }
+    #status {
+      font-size: 13px;
+      padding: 8px 16px;
+      border-radius: 6px;
+      margin: 12px 24px;
+      display: none;
+    }
 
-      #status.success {
-        display: block;
-        background: #f0fdf4;
-        color: #166534;
-        border: 1px solid #bbf7d0;
-      }
+    #status.error {
+      display: block;
+      background: #fef2f2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+    }
 
-      #status.info {
-        display: block;
-        background: #eff6ff;
-        color: #1e40af;
-        border: 1px solid #bfdbfe;
-      }
+    #status.success {
+      display: block;
+      background: #f0fdf4;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+    }
 
-      .demo-notes {
-        margin: 0 24px 12px;
-        padding: 12px 16px;
-        background: white;
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
-        display: grid;
-        gap: 8px;
-        font-size: 13px;
-      }
+    #status.info {
+      display: block;
+      background: #eff6ff;
+      color: #1e40af;
+      border: 1px solid #bfdbfe;
+    }
 
-      .demo-notes code {
-        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-        background: #f3f4f6;
-        padding: 2px 6px;
-        border-radius: 6px;
-      }
+    .demo-notes {
+      margin: 0 24px 12px;
+      padding: 12px 16px;
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      display: grid;
+      gap: 8px;
+      font-size: 13px;
+    }
 
-      #embed-root {
-        max-width: 1200px;
-        margin: 24px auto;
-        min-height: 720px;
-        height: calc(100vh - 230px);
-        max-height: 960px;
-        overflow: auto;
-      }
-    </style>
-  </head>
+    .demo-notes code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      background: #f3f4f6;
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
 
-  <body>
-    <header>
-      <div>
-        <strong>Custom Element Host Demo</strong>
-        <div style="font-size: 12px; opacity: 0.9; margin-top: 4px">
-          A non-React host embedding <code>&lt;superposition-admin&gt;</code>
-        </div>
-      </div>
-      <a href="./index.html">Open React host demo</a>
-    </header>
+    #embed-root {
+      max-width: 1200px;
+      margin: 24px auto;
+      min-height: 720px;
+      height: calc(100vh - 230px);
+      max-height: 960px;
+      overflow: auto;
+    }
+  </style>
+</head>
 
-    <form id="demo-form" class="toolbar">
-      <label for="host">Host:</label>
-      <input id="host" name="host" type="text" value="/api" style="width: 220px" />
-
-      <span id="api-chip" class="toolbar-chip">API: host proxy</span>
-
-      <label for="orgId">Org ID:</label>
-      <input id="orgId" name="orgId" type="text" value="localorg" style="width: 120px" />
-
-      <label for="workspace">Workspace:</label>
-      <input
-        id="workspace"
-        name="workspace"
-        type="text"
-        value="dev"
-        style="width: 120px"
-      />
-
-      <span class="toolbar-label">Features:</span>
-      <div id="features" class="feature-picker" role="group" aria-label="Features"></div>
-      <input
-        id="featuresValue"
-        name="features"
-        type="hidden"
-        value="config,dimensions,overrides"
-      />
-
-      <label for="scopeJson">Scoped Filter:</label>
-      <input
-        id="scopeJson"
-        name="scopeJson"
-        type="text"
-        value='{"region":"us-east-1"}'
-        style="width: 220px"
-      />
-
-      <label for="writeScopeJson">Write Scope:</label>
-      <input
-        id="writeScopeJson"
-        name="writeScopeJson"
-        type="text"
-        placeholder='{"merchant_id":"m_123","profile_id":"p_123"}'
-        style="width: 260px"
-      />
-
-      <label for="scopeLocked">Lock Scope:</label>
-      <input id="scopeLocked" name="scopeLocked" type="checkbox" checked />
-
-      <label for="strict">Strict:</label>
-      <input id="strict" name="strict" type="checkbox" />
-
-      <label for="themeMode">Theme Mode:</label>
-      <select id="themeMode" name="themeMode">
-        <option value="system">system</option>
-        <option value="light">light</option>
-        <option value="dark">dark</option>
-      </select>
-
-      <label for="themePrimary">Primary:</label>
-      <input id="themePrimary" name="themePrimary" type="color" value="#0f766e" />
-
-      <label for="themeBg">Background:</label>
-      <input id="themeBg" name="themeBg" type="color" value="#ecfeff" />
-
-      <label for="themePanel">Panel:</label>
-      <input id="themePanel" name="themePanel" type="color" value="#ffffff" />
-
-      <label for="buttonBg">Button:</label>
-      <input id="buttonBg" name="buttonBg" type="color" value="#0f766e" />
-      <input id="buttonText" name="buttonText" type="hidden" value="#ffffff" />
-
-      <label for="iconColor">Icons:</label>
-      <input id="iconColor" name="iconColor" type="color" value="#4b5563" />
-
-      <label for="searchBorder">Search Border:</label>
-      <input id="searchBorder" name="searchBorder" type="color" value="#a5f3fc" />
-
-      <label for="dropdownSelectedBg">Dropdown Selected:</label>
-      <input
-        id="dropdownSelectedBg"
-        name="dropdownSelectedBg"
-        type="color"
-        value="#ecfeff"
-      />
-
-      <label for="bannerBg">Banner:</label>
-      <input id="bannerBg" name="bannerBg" type="color" value="#fff7ed" />
-
-      <button type="submit">Mount Element</button>
-    </form>
-
-    <div id="status"></div>
-
-    <div class="demo-notes">
-      <div>
-        <strong>Optional filter:</strong> the scoped filter goes into the element
-        <code>config</code> payload as <code>scope.context</code>.
-      </div>
-      <div>
-        <strong>Theme:</strong> the colors here map to nested
-        <code>config.theme.colors</code>, <code>theme.button.primary</code>,
-        <code>theme.icon</code>, <code>theme.search</code>, <code>theme.dropdown</code>,
-        and <code>theme.banner</code> values.
-      </div>
-      <div>
-        <strong>API:</strong> this host still uses the embeddable package’s REST client;
-        the element only needs a reachable API base URL.
+<body>
+  <header>
+    <div>
+      <strong>Custom Element Host Demo</strong>
+      <div style="font-size: 12px; opacity: 0.9; margin-top: 4px">
+        A non-React host embedding <code>&lt;superposition-admin&gt;</code>
       </div>
     </div>
+    <a href="./index.html">Open React host demo</a>
+  </header>
 
-    <div id="embed-root">
-      <superposition-admin id="embedded-admin"></superposition-admin>
+  <form id="demo-form" class="toolbar">
+    <label for="host">Host:</label>
+    <input id="host" name="host" type="text" value="/api" style="width: 220px" />
+
+    <span id="api-chip" class="toolbar-chip">API: host proxy</span>
+
+    <label for="orgId">Org ID:</label>
+    <input id="orgId" name="orgId" type="text" value="localorg" style="width: 120px" />
+
+    <label for="workspace">Workspace:</label>
+    <input id="workspace" name="workspace" type="text" value="dev" style="width: 120px" />
+
+    <span class="toolbar-label">Features:</span>
+    <div id="features" class="feature-picker" role="group" aria-label="Features"></div>
+    <input id="featuresValue" name="features" type="hidden" value="config,dimensions,overrides" />
+
+    <label for="scopeJson">Scoped Filter:</label>
+    <input id="scopeJson" name="scopeJson" type="text" value='{"region":"us-east-1"}' style="width: 220px" />
+
+    <label for="scopeLocked">Lock Scope:</label>
+    <input id="scopeLocked" name="scopeLocked" type="checkbox" checked />
+
+    <label for="strict">Strict:</label>
+    <input id="strict" name="strict" type="checkbox" />
+
+    <label for="themeMode">Theme Mode:</label>
+    <select id="themeMode" name="themeMode">
+      <option value="system">system</option>
+      <option value="light">light</option>
+      <option value="dark">dark</option>
+    </select>
+
+    <label for="themePrimary">Primary:</label>
+    <input id="themePrimary" name="themePrimary" type="color" value="#0f766e" />
+
+    <label for="themeBg">Background:</label>
+    <input id="themeBg" name="themeBg" type="color" value="#ecfeff" />
+
+    <label for="themePanel">Panel:</label>
+    <input id="themePanel" name="themePanel" type="color" value="#ffffff" />
+
+    <label for="buttonBg">Button:</label>
+    <input id="buttonBg" name="buttonBg" type="color" value="#0f766e" />
+    <input id="buttonText" name="buttonText" type="hidden" value="#ffffff" />
+
+    <label for="iconColor">Icons:</label>
+    <input id="iconColor" name="iconColor" type="color" value="#4b5563" />
+
+    <label for="searchBorder">Search Border:</label>
+    <input id="searchBorder" name="searchBorder" type="color" value="#a5f3fc" />
+
+    <label for="dropdownSelectedBg">Dropdown Selected:</label>
+    <input id="dropdownSelectedBg" name="dropdownSelectedBg" type="color" value="#ecfeff" />
+
+    <label for="bannerBg">Banner:</label>
+    <input id="bannerBg" name="bannerBg" type="color" value="#fff7ed" />
+
+    <button type="submit">Mount Element</button>
+  </form>
+
+  <div id="status"></div>
+
+  <div class="demo-notes">
+    <div>
+      <strong>Optional filter:</strong> the scoped filter goes into the element
+      <code>config</code> payload as <code>scope.context</code>.
     </div>
+    <div>
+      <strong>Theme:</strong> the colors here map to nested
+      <code>config.theme.colors</code>, <code>theme.button.primary</code>,
+      <code>theme.icon</code>, <code>theme.search</code>, <code>theme.dropdown</code>,
+      and <code>theme.banner</code> values.
+    </div>
+    <div>
+      <strong>API:</strong> this host still uses the embeddable package’s REST client;
+      the element only needs a reachable API base URL.
+    </div>
+  </div>
 
-    <script type="module" src="./custom-elements.ts"></script>
-  </body>
+  <div id="embed-root">
+    <superposition-admin id="embedded-admin"></superposition-admin>
+  </div>
+
+  <script type="module" src="./custom-elements.ts"></script>
+</body>
+
 </html>

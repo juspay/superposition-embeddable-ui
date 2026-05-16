@@ -37,10 +37,12 @@ describe("Table", () => {
         data={[]}
         keyExtractor={(r: Row) => r.id}
         emptyMessage="Nothing here"
+        emptyDescription="Add a row to populate this table."
       />,
     );
 
     expect(screen.getByText("Nothing here")).toBeDefined();
+    expect(screen.getByText("Add a row to populate this table.")).toBeDefined();
   });
 
   it("shows loading state", () => {
@@ -86,6 +88,7 @@ describe("Table", () => {
     expect(screen.getByText("S.No")).toBeDefined();
     expect(screen.getByText("11")).toBeDefined();
     expect(screen.getByText("12")).toBeDefined();
+    expect(screen.getByText("11").style.textAlign).toBe("left");
   });
 
   it("resolves serial number options from embeddable config", () => {

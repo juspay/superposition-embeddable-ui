@@ -151,8 +151,8 @@ function TrashIcon() {
     <svg
       aria-hidden="true"
       viewBox="0 0 24 24"
-      width="calc(var(--sp-icon-size) * 1.35)"
-      height="calc(var(--sp-icon-size) * 1.35)"
+      width="var(--sp-form-remove-button-icon-size)"
+      height="var(--sp-form-remove-button-icon-size)"
       style={{ color: "currentColor", flex: "0 0 auto" }}
     >
       <path
@@ -347,9 +347,9 @@ function FieldCard({
   schemaFor: (key: string) => Record<string, JsonValue> | undefined;
 }) {
   return (
-    <div style={{ display: "grid", gap: 14 }}>
+    <div style={{ display: "grid", gap: "var(--sp-space-sm)" }}>
       <div style={{ display: "grid", gap: 4 }}>
-        <div style={{ fontSize: 18, fontWeight: 700 }}>{title}</div>
+        <div style={{ fontSize: "1rem", fontWeight: 700 }}>{title}</div>
         {validationMessage && (
           <div style={{ fontSize: 12, color: "var(--sp-feedback-danger-text)" }}>
             {validationMessage}
@@ -363,10 +363,10 @@ function FieldCard({
             "1px solid color-mix(in oklab, var(--sp-color-border) 55%, transparent)",
           borderRadius: "var(--sp-card-radius)",
           background: "var(--sp-color-surface-muted)",
-          padding: entries.length === 0 ? "42px 18px" : "var(--sp-space-lg)",
+          padding: entries.length === 0 ? "var(--sp-space-md)" : "var(--sp-space-lg)",
           display: "grid",
-          gap: 18,
-          justifyItems: entries.length === 0 ? "center" : "start",
+          gap: "var(--sp-space-md)",
+          justifyItems: "start",
         }}
       >
         {entries.length === 0 ? (
@@ -387,54 +387,94 @@ function FieldCard({
                 <div
                   key={entry.key}
                   style={{
-                    width: "min(620px, 100%)",
-                    display: "grid",
-                    gridTemplateColumns: "minmax(0, 1fr) auto",
-                    gap: "var(--sp-space-md)",
-                    alignItems: "center",
+                    width: "100%",
                   }}
                 >
-                  <div style={{ display: "grid", gap: 10 }}>
+                  <div
+                    style={{
+                      display: "grid",
+                      gap: 10,
+                    }}
+                  >
                     <div
                       style={{
                         display: "flex",
                         alignItems: "center",
-                        gap: 8,
-                        flexWrap: "wrap",
+                        justifyContent: "space-between",
+                        gap: "var(--sp-space-sm)",
                       }}
                     >
-                      <span
+                      <div
                         style={{
-                          fontSize: 14,
-                          fontWeight: 700,
-                          color: "var(--sp-color-muted)",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          flexWrap: "wrap",
+                          minWidth: 0,
                         }}
                       >
-                        {entry.key}:
-                      </span>
-                      <span
-                        style={{
-                          padding: "2px 8px",
-                          borderRadius: "var(--sp-pill-radius)",
-                          border: "1px solid var(--sp-color-border)",
-                          fontSize: 11,
-                          fontWeight: 700,
-                          color: "var(--sp-color-muted)",
-                        }}
-                      >
-                        {getTypeBadge(schema)}
-                      </span>
-                      {entry.required && (
                         <span
                           style={{
+                            fontSize: 14,
+                            fontWeight: 700,
+                            color: "var(--sp-color-muted)",
+                          }}
+                        >
+                          {entry.key}:
+                        </span>
+                        <span
+                          style={{
+                            padding: "2px 8px",
+                            borderRadius: "var(--sp-pill-radius)",
+                            border: "1px solid var(--sp-color-border)",
                             fontSize: 11,
                             fontWeight: 700,
                             color: "var(--sp-color-muted)",
                           }}
                         >
-                          Required
+                          {getTypeBadge(schema)}
                         </span>
-                      )}
+                        {entry.required && (
+                          <span
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 700,
+                              color: "var(--sp-color-muted)",
+                            }}
+                          >
+                            Required
+                          </span>
+                        )}
+                      </div>
+                      <Tooltip content={`Remove ${entry.key}`}>
+                        <button
+                          type="button"
+                          aria-label={`Remove ${entry.key}`}
+                          style={{
+                            width: "var(--sp-form-remove-button-width)",
+                            height: "var(--sp-form-remove-button-height)",
+                            border: "1px solid var(--sp-form-remove-button-border)",
+                            borderRadius: "var(--sp-form-remove-button-radius)",
+                            background: "var(--sp-form-remove-button-bg)",
+                            color: "var(--sp-form-remove-button-text)",
+                            boxShadow: "var(--sp-form-remove-button-shadow)",
+                            cursor:
+                              entry.required || entry.locked ? "not-allowed" : "pointer",
+                            opacity: entry.required || entry.locked ? 0.45 : 1,
+                            padding: 0,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flex: "0 0 auto",
+                            transition:
+                              "border-color 180ms ease, background 180ms ease, color 180ms ease, transform 180ms ease",
+                          }}
+                          onClick={() => onRemove(entry.key)}
+                          disabled={entry.required || entry.locked}
+                        >
+                          <TrashIcon />
+                        </button>
+                      </Tooltip>
                     </div>
 
                     {inputKind === "string" && (
@@ -552,32 +592,6 @@ function FieldCard({
                       </div>
                     )}
                   </div>
-                  <Tooltip content={`Remove ${entry.key}`}>
-                    <button
-                      type="button"
-                      aria-label={`Remove ${entry.key}`}
-                      style={{
-                        width: "var(--sp-form-remove-button-width)",
-                        height: "var(--sp-form-remove-button-height)",
-                        border: "1px solid var(--sp-form-remove-button-border)",
-                        borderRadius: "var(--sp-form-remove-button-radius)",
-                        background: "var(--sp-form-remove-button-bg)",
-                        color: "var(--sp-form-remove-button-text)",
-                        boxShadow: "var(--sp-form-remove-button-shadow)",
-                        cursor:
-                          entry.required || entry.locked ? "not-allowed" : "pointer",
-                        opacity: entry.required || entry.locked ? 0.45 : 1,
-                        padding: 0,
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                      onClick={() => onRemove(entry.key)}
-                      disabled={entry.required || entry.locked}
-                    >
-                      <TrashIcon />
-                    </button>
-                  </Tooltip>
                 </div>
               );
             })}
@@ -637,13 +651,18 @@ export function StructuredContextOverrideForm({
     () => Object.fromEntries(defaultConfigs.map((config) => [config.key, config])),
     [defaultConfigs],
   );
+  const lockedKeySet = useMemo(() => new Set(lockedKeys), [lockedKeys]);
 
   const availableDimensions = useMemo(
     () =>
       dimensions
-        .filter((dimension) => dimension.dimension !== "variantIds")
+        .filter(
+          (dimension) =>
+            dimension.dimension !== "variantIds" &&
+            !lockedKeySet.has(dimension.dimension),
+        )
         .map((dimension) => ({ value: dimension.dimension, label: dimension.dimension })),
-    [dimensions],
+    [dimensions, lockedKeySet],
   );
 
   const availableConfigKeys = useMemo(
