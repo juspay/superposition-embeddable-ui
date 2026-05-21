@@ -98,6 +98,10 @@ function deepMerge<T>(base: T, ...overrides: unknown[]): T {
   return output as T;
 }
 
+function cssLength(value: unknown): string {
+  return typeof value === "number" ? `${value}px` : String(value);
+}
+
 function buildBlendFoundationTokens(tokens?: SuperpositionThemeTokens): BlendThemeType {
   const colors = tokens?.colors;
   const legacyColorOverrides = {
@@ -261,7 +265,9 @@ function buildThemeVars(
     "--sp-button-primary-text":
       buttonPrimary?.textColor ?? button?.textColor ?? foundationColors.gray[0],
     "--sp-button-primary-border":
-      buttonPrimary?.borderColor ?? button?.borderColor ?? "transparent",
+      buttonPrimary?.borderColor ??
+      button?.borderColor ??
+      "color-mix(in oklab, var(--sp-color-primary) 72%, var(--sp-color-border))",
     "--sp-button-primary-shadow": buttonPrimary?.shadow ?? button?.shadow ?? "none",
     "--sp-button-secondary-bg":
       buttonSecondary?.bgColor ?? button?.bgColor ?? "var(--sp-color-panel)",
@@ -285,7 +291,7 @@ function buildThemeVars(
     "--sp-button-padding":
       button?.padding ?? `${foundationUnit[8]} ${foundationUnit[12]}`,
     "--sp-button-radius": button?.borderRadius ?? "var(--sp-control-radius)",
-    "--sp-button-font-size": button?.fontSize ?? foundationFont.fontSize[14],
+    "--sp-button-font-size": cssLength(button?.fontSize ?? foundationFont.fontSize[14]),
     "--sp-button-font-weight": button?.fontWeight ?? foundationFont.weight[500],
     "--sp-icon-size": icon?.size ?? foundationUnit[16],
     "--sp-icon-color": icon?.color ?? "var(--sp-color-muted)",
@@ -323,7 +329,7 @@ function buildThemeVars(
     "--sp-search-padding": search?.padding ?? "var(--sp-space-sm) var(--sp-space-md)",
     "--sp-search-width": search?.width ?? "min(360px, 100%)",
     "--sp-search-height": search?.height ?? "40px",
-    "--sp-search-font-size": search?.fontSize ?? foundationFont.fontSize[14],
+    "--sp-search-font-size": cssLength(search?.fontSize ?? foundationFont.fontSize[14]),
     "--sp-search-font-weight": search?.fontWeight ?? foundationFont.weight[400],
     "--sp-search-shadow": search?.shadow ?? "none",
     "--sp-search-opacity": search?.opacity ?? "1",
@@ -373,9 +379,13 @@ function buildThemeVars(
       "color-mix(in oklab, var(--sp-color-text) 18%, transparent)",
     "--sp-tooltip-radius": tooltip?.borderRadius ?? "var(--sp-inline-radius)",
     "--sp-tooltip-shadow": tooltip?.shadow ?? "var(--sp-shadow-sm)",
-    "--sp-tooltip-font-size": tooltip?.fontSize ?? foundationFont.fontSize[12],
+    "--sp-tooltip-font-size": cssLength(
+      tooltip?.fontSize ?? foundationFont.fontSize[12],
+    ),
     "--sp-page-title-text": pageTitle?.textColor ?? "var(--sp-color-text)",
-    "--sp-page-title-font-size": pageTitle?.fontSize ?? foundationFont.fontSize[24],
+    "--sp-page-title-font-size": cssLength(
+      pageTitle?.fontSize ?? foundationFont.fontSize[32],
+    ),
     "--sp-page-title-font-weight": pageTitle?.fontWeight ?? foundationFont.weight[700],
     "--sp-page-title-margin": pageTitle?.margin ?? "0",
     "--sp-banner-bg":
@@ -393,7 +403,9 @@ function buildThemeVars(
       banner?.padding ??
       `${foundationUnit[12]} ${foundationUnit[14]}`,
     "--sp-banner-font-size":
-      bannerWarning?.fontSize ?? banner?.fontSize ?? foundationFont.fontSize[14],
+      cssLength(
+        bannerWarning?.fontSize ?? banner?.fontSize ?? foundationFont.fontSize[14],
+      ),
     "--sp-banner-font-weight":
       bannerWarning?.fontWeight ?? banner?.fontWeight ?? foundationFont.weight[500],
     "--sp-toast-bg": toast?.bgColor ?? "var(--sp-color-panel)",
@@ -450,7 +462,7 @@ function buildThemeVars(
       typography?.fontFamily ??
       foundationFont.family.body ??
       'InterDisplay, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif',
-    fontSize: typography?.fontSize ?? foundationFont.fontSize[14],
+    fontSize: cssLength(typography?.fontSize ?? foundationFont.fontSize[14]),
     color: "var(--sp-color-text)",
   } as React.CSSProperties;
 }

@@ -129,7 +129,7 @@ export function FormField({
 export const inputStyle: React.CSSProperties = {
   width: "100%",
   padding: "8px 12px",
-  border: "1px solid var(--sp-control-border)",
+  border: "1.5px solid var(--sp-control-border)",
   background: "var(--sp-control-bg)",
   color: "var(--sp-control-text)",
   borderRadius: "var(--sp-control-radius)",
@@ -143,12 +143,14 @@ export const buttonPrimary: React.CSSProperties = {
   padding: "var(--sp-button-padding)",
   background: "var(--sp-button-primary-bg)",
   color: "var(--sp-button-primary-text)",
-  border: "1px solid var(--sp-button-primary-border)",
+  border: "2px solid var(--sp-button-primary-border)",
   borderRadius: "var(--sp-button-radius)",
   fontSize: "var(--sp-button-font-size)",
   cursor: "pointer",
   fontWeight: "var(--sp-button-font-weight)",
-  boxShadow: "var(--sp-button-primary-shadow)",
+  boxShadow: "var(--sp-button-primary-shadow), var(--sp-shadow-sm)",
+  transition:
+    "box-shadow 180ms ease, background 180ms ease, border-color 180ms ease, transform 120ms ease",
 };
 
 export const buttonSecondary: React.CSSProperties = {
@@ -160,6 +162,8 @@ export const buttonSecondary: React.CSSProperties = {
   fontSize: "var(--sp-button-font-size)",
   cursor: "pointer",
   fontWeight: "var(--sp-button-font-weight)",
+  transition:
+    "box-shadow 180ms ease, background 180ms ease, border-color 180ms ease, transform 120ms ease",
 };
 
 export const buttonDanger: React.CSSProperties = {

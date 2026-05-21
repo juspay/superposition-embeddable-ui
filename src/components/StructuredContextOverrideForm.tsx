@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { DefaultConfig, Dimension, JsonValue } from "../types";
 import { ConditionBadges } from "./ConditionBadges";
-import { buttonSecondary, inputStyle } from "./FormField";
+import { inputStyle } from "./FormField";
 import { Tooltip } from "./Tooltip";
 
 export interface FieldEntryState {
@@ -24,6 +24,10 @@ interface StructuredContextOverrideFormProps {
   showOverrideFields?: boolean;
   showLockedScope?: boolean;
   showValidationErrors?: boolean;
+  canAddContext?: boolean;
+  canRemoveContext?: boolean;
+  canAddOverride?: boolean;
+  canRemoveOverride?: boolean;
   onAddContextKey: (key: string) => void;
   onUpdateContextEntry: (key: string, update: Partial<FieldEntryState>) => void;
   onRemoveContextKey: (key: string) => void;
@@ -98,54 +102,6 @@ function normalizeEntries(entries: FieldEntryState[]) {
   });
 }
 
-function PlusIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 20 20"
-      width="var(--sp-search-icon-size)"
-      height="var(--sp-search-icon-size)"
-      style={{ color: "var(--sp-search-icon-color)", flex: "0 0 auto" }}
-    >
-      <path
-        d="M10 4.5v11M4.5 10h11"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeWidth="2"
-      />
-    </svg>
-  );
-}
-
-function SearchIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 20 20"
-      width="var(--sp-icon-size)"
-      height="var(--sp-icon-size)"
-      style={{ color: "var(--sp-icon-color)", flex: "0 0 auto" }}
-    >
-      <circle
-        cx="8.7"
-        cy="8.7"
-        r="5.2"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-      />
-      <path
-        d="m12.6 12.6 3.2 3.2"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeWidth="1.8"
-      />
-    </svg>
-  );
-}
-
 function TrashIcon() {
   return (
     <svg
@@ -163,6 +119,82 @@ function TrashIcon() {
   );
 }
 
+function SafeSelect({
+  label,
+  selected,
+  items,
+  onSelect,
+  error,
+}: {
+  label: string;
+  selected?: string;
+  items: Array<{ value: string; label: string }>;
+  onSelect: (value: string) => void;
+  error?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const selectedItem = items.find((item) => item.value === selected);
+  const buttonLabel = selectedItem?.label ?? label;
+
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [open]);
+
+  return (
+    <div className={open ? "sp-select sp-select-open" : "sp-select"} ref={rootRef}>
+      <button
+        type="button"
+        className="sp-select__trigger"
+        aria-label={label}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+      >
+        <span className={selectedItem ? "sp-select__value" : "sp-select__placeholder"}>
+          {buttonLabel}
+        </span>
+        <span className="sp-select__chevron" aria-hidden="true">
+          v
+        </span>
+      </button>
+      {open && (
+        <div className="sp-select__menu" role="listbox" aria-label={label}>
+          {items.length === 0 ? (
+            <div className="sp-select__empty">No options</div>
+          ) : (
+            items.map((item) => (
+              <button
+                key={item.value}
+                type="button"
+                className="sp-select__option"
+                role="option"
+                aria-selected={item.value === selected}
+                onClick={() => {
+                  onSelect(item.value);
+                  setOpen(false);
+                }}
+              >
+                {item.label}
+              </button>
+            ))
+          )}
+        </div>
+      )}
+      {error && <div className="sp-select__error">{error}</div>}
+    </div>
+  );
+}
+
 function AddOptionMenu({
   label,
   options,
@@ -174,154 +206,18 @@ function AddOptionMenu({
   selectedValues: string[];
   onSelect: (value: string) => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const rootRef = useRef<HTMLDivElement | null>(null);
   const selectedSet = useMemo(() => new Set(selectedValues), [selectedValues]);
   const availableOptions = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    return options.filter((option) => {
-      if (selectedSet.has(option.value)) return false;
-      if (!query) return true;
-      return option.label.toLowerCase().includes(query);
-    });
-  }, [options, search, selectedSet]);
-
-  useEffect(() => {
-    if (!open) return;
-
-    const handlePointerDown = (event: MouseEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handlePointerDown);
-    return () => document.removeEventListener("mousedown", handlePointerDown);
-  }, [open]);
+    return options.filter((option) => !selectedSet.has(option.value));
+  }, [options, selectedSet]);
 
   return (
-    <div ref={rootRef} style={{ display: "grid", gap: 8, width: "fit-content" }}>
-      <button
-        type="button"
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        style={{
-          ...buttonSecondary,
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 8,
-          color: "var(--sp-color-primary)",
-          borderColor: "var(--sp-color-primary)",
-          background: "var(--sp-color-panel)",
-          boxShadow: open
-            ? "0 0 0 3px color-mix(in oklab, var(--sp-color-primary) 12%, transparent)"
-            : "none",
-        }}
-        onClick={() => {
-          setOpen((current) => !current);
-          setSearch("");
-        }}
-      >
-        <PlusIcon />
-        {label}
-      </button>
-      {open && (
-        <div
-          role="listbox"
-          aria-label={label}
-          style={{
-            zIndex: 3,
-            width: "min(var(--sp-dropdown-width), calc(100vw - 48px))",
-            maxHeight: 260,
-            overflowY: "auto",
-            padding: 8,
-            border: "1px solid var(--sp-dropdown-menu-border)",
-            borderRadius: "var(--sp-dropdown-control-radius)",
-            background: "var(--sp-dropdown-menu-bg)",
-            boxShadow: "var(--sp-dropdown-menu-shadow)",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              border: "1px solid var(--sp-search-border)",
-              borderRadius: "var(--sp-search-radius)",
-              background: "var(--sp-search-bg)",
-              padding: "0 var(--sp-space-sm)",
-              marginBottom: 8,
-            }}
-          >
-            <SearchIcon />
-            <input
-              aria-label={`${label} search`}
-              style={{
-                width: "100%",
-                border: 0,
-                outline: "none",
-                background: "transparent",
-                color: "var(--sp-search-text)",
-                padding: "10px 0",
-                fontSize: "var(--sp-search-font-size)",
-              }}
-              placeholder="Search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              autoFocus
-            />
-          </div>
-          {availableOptions.length === 0 ? (
-            <div
-              style={{
-                padding: "10px 12px",
-                color: "var(--sp-color-muted)",
-                fontSize: 13,
-              }}
-            >
-              No options available
-            </div>
-          ) : (
-            availableOptions.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                role="option"
-                aria-selected={false}
-                style={{
-                  width: "100%",
-                  display: "block",
-                  padding: "12px 14px",
-                  border: 0,
-                  borderRadius: "var(--sp-inline-radius)",
-                  background: "transparent",
-                  color: "var(--sp-color-text)",
-                  cursor: "pointer",
-                  fontWeight: 600,
-                  textAlign: "left",
-                  boxShadow: "none",
-                }}
-                onMouseEnter={(event) => {
-                  event.currentTarget.style.background =
-                    "var(--sp-dropdown-option-hover-bg)";
-                }}
-                onMouseLeave={(event) => {
-                  event.currentTarget.style.background = "transparent";
-                }}
-                onClick={() => {
-                  onSelect(option.value);
-                  setOpen(false);
-                  setSearch("");
-                }}
-              >
-                {option.label}
-              </button>
-            ))
-          )}
-        </div>
-      )}
-    </div>
+    <SafeSelect
+      label={label}
+      items={availableOptions}
+      selected=""
+      onSelect={onSelect}
+    />
   );
 }
 
@@ -331,6 +227,8 @@ function FieldCard({
   addLabel,
   selectOptions,
   validationMessage,
+  canAdd = true,
+  canRemove = true,
   onAdd,
   onUpdate,
   onRemove,
@@ -341,41 +239,110 @@ function FieldCard({
   addLabel: string;
   selectOptions: Array<{ value: string; label: string }>;
   validationMessage?: string;
+  canAdd?: boolean;
+  canRemove?: boolean;
   onAdd: (key: string) => void;
   onUpdate: (key: string, update: Partial<FieldEntryState>) => void;
   onRemove: (key: string) => void;
   schemaFor: (key: string) => Record<string, JsonValue> | undefined;
 }) {
   return (
-    <div style={{ display: "grid", gap: "var(--sp-space-sm)" }}>
-      <div style={{ display: "grid", gap: 4 }}>
-        <div style={{ fontSize: "1rem", fontWeight: 700 }}>{title}</div>
-        {validationMessage && (
-          <div style={{ fontSize: 12, color: "var(--sp-feedback-danger-text)" }}>
-            {validationMessage}
+    <div
+      className="sp-field-card"
+      style={{
+        display: "grid",
+        gap: 0,
+        borderRadius: "var(--sp-card-radius)",
+        background: "var(--sp-color-panel)",
+        border: "1px solid var(--sp-color-border)",
+        boxShadow: "var(--sp-shadow-sm)",
+        overflow: "visible",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: "var(--sp-space-sm)",
+          flexWrap: "wrap",
+          padding: "var(--sp-space-md)",
+          background: "var(--sp-color-surface-muted)",
+          borderBottom: "1px solid var(--sp-color-border)",
+        }}
+      >
+        <div style={{ display: "grid", gap: 4 }}>
+          <div style={{ fontSize: "1rem", lineHeight: 1.25, fontWeight: 800 }}>
+            {title}
+            {entries.length > 0 && (
+              <span
+                style={{
+                  marginLeft: 8,
+                  color: "var(--sp-color-muted)",
+                  fontSize: 12,
+                  fontWeight: 700,
+                }}
+              >
+                {entries.length}
+              </span>
+            )}
           </div>
+          {validationMessage && (
+            <div style={{ fontSize: 12, color: "var(--sp-feedback-danger-text)" }}>
+              {validationMessage}
+            </div>
+          )}
+        </div>
+        {canAdd && entries.length > 0 && (
+          <AddOptionMenu
+            label={addLabel}
+            options={selectOptions}
+            selectedValues={entries.map((entry) => entry.key)}
+            onSelect={onAdd}
+          />
         )}
       </div>
 
       <div
         style={{
-          border:
-            "1px solid color-mix(in oklab, var(--sp-color-border) 55%, transparent)",
-          borderRadius: "var(--sp-card-radius)",
-          background: "var(--sp-color-surface-muted)",
-          padding: entries.length === 0 ? "var(--sp-space-md)" : "var(--sp-space-lg)",
+          background: "var(--sp-color-panel)",
+          padding: entries.length === 0 ? "var(--sp-space-md)" : 0,
           display: "grid",
-          gap: "var(--sp-space-md)",
-          justifyItems: "start",
+          overflow: "visible",
         }}
       >
         {entries.length === 0 ? (
-          <AddOptionMenu
-            label={addLabel}
-            options={selectOptions}
-            selectedValues={[]}
-            onSelect={onAdd}
-          />
+          <div
+            style={{
+              minHeight: 72,
+              border: "1px dashed var(--sp-color-border)",
+              borderRadius: "var(--sp-inline-radius)",
+              background: "var(--sp-color-surface-muted)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "var(--sp-space-sm)",
+            }}
+          >
+            {canAdd ? (
+              <AddOptionMenu
+                label={addLabel}
+                options={selectOptions}
+                selectedValues={[]}
+                onSelect={onAdd}
+              />
+            ) : (
+              <span
+                style={{
+                  color: "var(--sp-color-muted)",
+                  fontSize: 14,
+                  fontWeight: 500,
+                }}
+              >
+                No items
+              </span>
+            )}
+          </div>
         ) : (
           <>
             {entries.map((entry) => {
@@ -388,219 +355,215 @@ function FieldCard({
                   key={entry.key}
                   style={{
                     width: "100%",
+                    padding: "var(--sp-space-md)",
+                    borderBottom: "1px solid var(--sp-color-border)",
+                    background: "var(--sp-color-panel)",
                   }}
                 >
                   <div
                     style={{
                       display: "grid",
-                      gap: 10,
+                      gridTemplateColumns: "minmax(180px, 240px) minmax(220px, 1fr) auto",
+                      alignItems: "start",
+                      gap: "var(--sp-space-md)",
                     }}
                   >
                     <div
                       style={{
                         display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        gap: "var(--sp-space-sm)",
+                        alignItems: "flex-start",
+                        gap: 8,
+                        flexWrap: "wrap",
+                        minWidth: 0,
+                        paddingTop: 7,
                       }}
                     >
-                      <div
+                      <span
                         style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 8,
-                          flexWrap: "wrap",
-                          minWidth: 0,
+                          fontSize: 14,
+                          fontWeight: 700,
+                          color: "var(--sp-color-text)",
+                          overflowWrap: "anywhere",
                         }}
                       >
+                        {entry.key}
+                      </span>
+                      <span
+                        style={{
+                          padding: "2px 8px",
+                          borderRadius: "var(--sp-pill-radius)",
+                          border: "1px solid var(--sp-color-border)",
+                          background: "var(--sp-color-surface-muted)",
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: "var(--sp-color-muted)",
+                        }}
+                      >
+                        {getTypeBadge(schema)}
+                      </span>
+                      {entry.required && (
                         <span
                           style={{
-                            fontSize: 14,
-                            fontWeight: 700,
-                            color: "var(--sp-color-muted)",
-                          }}
-                        >
-                          {entry.key}:
-                        </span>
-                        <span
-                          style={{
-                            padding: "2px 8px",
-                            borderRadius: "var(--sp-pill-radius)",
-                            border: "1px solid var(--sp-color-border)",
                             fontSize: 11,
                             fontWeight: 700,
                             color: "var(--sp-color-muted)",
                           }}
                         >
-                          {getTypeBadge(schema)}
+                          Required
                         </span>
-                        {entry.required && (
-                          <span
-                            style={{
-                              fontSize: 11,
-                              fontWeight: 700,
-                              color: "var(--sp-color-muted)",
-                            }}
-                          >
-                            Required
-                          </span>
-                        )}
-                      </div>
-                      <Tooltip content={`Remove ${entry.key}`}>
-                        <button
-                          type="button"
-                          aria-label={`Remove ${entry.key}`}
-                          style={{
-                            width: "var(--sp-form-remove-button-width)",
-                            height: "var(--sp-form-remove-button-height)",
-                            border: "1px solid var(--sp-form-remove-button-border)",
-                            borderRadius: "var(--sp-form-remove-button-radius)",
-                            background: "var(--sp-form-remove-button-bg)",
-                            color: "var(--sp-form-remove-button-text)",
-                            boxShadow: "var(--sp-form-remove-button-shadow)",
-                            cursor:
-                              entry.required || entry.locked ? "not-allowed" : "pointer",
-                            opacity: entry.required || entry.locked ? 0.45 : 1,
-                            padding: 0,
-                            display: "inline-flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            flex: "0 0 auto",
-                            transition:
-                              "border-color 180ms ease, background 180ms ease, color 180ms ease, transform 180ms ease",
-                          }}
-                          onClick={() => onRemove(entry.key)}
-                          disabled={entry.required || entry.locked}
-                        >
-                          <TrashIcon />
-                        </button>
-                      </Tooltip>
+                      )}
                     </div>
 
-                    {inputKind === "string" && (
-                      <input
-                        aria-label={entry.key}
-                        style={inputStyle}
-                        value={
-                          typeof entry.value === "string"
-                            ? entry.value
-                            : String(entry.value ?? "")
-                        }
-                        onChange={(event) =>
-                          onUpdate(entry.key, {
-                            value: event.target.value,
-                            error: undefined,
-                          })
-                        }
-                      />
-                    )}
-
-                    {inputKind === "number" && (
-                      <input
-                        aria-label={entry.key}
-                        style={inputStyle}
-                        type="number"
-                        value={
-                          typeof entry.value === "number"
-                            ? entry.value
-                            : Number(entry.value ?? 0)
-                        }
-                        onChange={(event) => {
-                          const nextValue = event.target.value;
-                          const parsed = Number(nextValue);
-                          onUpdate(entry.key, {
-                            value: nextValue === "" ? 0 : parsed,
-                            error: Number.isNaN(parsed)
-                              ? "Enter a valid number."
-                              : undefined,
-                          });
-                        }}
-                      />
-                    )}
-
-                    {inputKind === "boolean" && (
-                      <select
-                        aria-label={entry.key}
-                        style={inputStyle}
-                        value={String(Boolean(entry.value))}
-                        onChange={(event) =>
-                          onUpdate(entry.key, {
-                            value: event.target.value === "true",
-                            error: undefined,
-                          })
-                        }
-                      >
-                        <option value="true">true</option>
-                        <option value="false">false</option>
-                      </select>
-                    )}
-
-                    {inputKind === "enum" && (
-                      <select
-                        aria-label={entry.key}
-                        style={inputStyle}
-                        value={JSON.stringify(entry.value)}
-                        onChange={(event) =>
-                          onUpdate(entry.key, {
-                            value: JSON.parse(event.target.value) as JsonValue,
-                            error: undefined,
-                          })
-                        }
-                      >
-                        {enumOptions.map((option) => (
-                          <option
-                            key={JSON.stringify(option)}
-                            value={JSON.stringify(option)}
-                          >
-                            {String(option)}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-
-                    {inputKind === "json" && (
-                      <textarea
-                        aria-label={entry.key}
-                        style={{ ...inputStyle, fontFamily: "monospace", minHeight: 90 }}
-                        value={entry.draft ?? valueToDraft(entry.value)}
-                        onChange={(event) => {
-                          const nextDraft = event.target.value;
-                          try {
-                            onUpdate(entry.key, {
-                              draft: nextDraft,
-                              value: JSON.parse(nextDraft) as JsonValue,
-                              error: undefined,
-                            });
-                          } catch {
-                            onUpdate(entry.key, {
-                              draft: nextDraft,
-                              error: "Enter valid JSON.",
-                            });
+                    <div style={{ display: "grid", gap: 6, minWidth: 0 }}>
+                      {inputKind === "string" && (
+                        <input
+                          aria-label={entry.key}
+                          style={inputStyle}
+                          value={
+                            typeof entry.value === "string"
+                              ? entry.value
+                              : String(entry.value ?? "")
                           }
-                        }}
-                      />
-                    )}
+                          onChange={(event) =>
+                            onUpdate(entry.key, {
+                              value: event.target.value,
+                              error: undefined,
+                            })
+                          }
+                        />
+                      )}
 
-                    {entry.error && (
-                      <div
-                        style={{
-                          fontSize: 12,
-                          color: "var(--sp-feedback-danger-text)",
-                        }}
-                      >
-                        {entry.error}
-                      </div>
-                    )}
+                      {inputKind === "number" && (
+                        <input
+                          aria-label={entry.key}
+                          style={inputStyle}
+                          type="number"
+                          value={
+                            typeof entry.value === "number"
+                              ? entry.value
+                              : Number(entry.value ?? 0)
+                          }
+                          onChange={(event) => {
+                            const nextValue = event.target.value;
+                            const parsed = Number(nextValue);
+                            onUpdate(entry.key, {
+                              value: nextValue === "" ? 0 : parsed,
+                              error: Number.isNaN(parsed)
+                                ? "Enter a valid number."
+                                : undefined,
+                            });
+                          }}
+                        />
+                      )}
+
+                      {inputKind === "boolean" && (
+                        <SafeSelect
+                          label={entry.key}
+                          selected={String(Boolean(entry.value))}
+                          items={[
+                            { value: "true", label: "true" },
+                            { value: "false", label: "false" },
+                          ]}
+                          error={entry.error}
+                          onSelect={(value) =>
+                            onUpdate(entry.key, {
+                              value: value === "true",
+                              error: undefined,
+                            })
+                          }
+                        />
+                      )}
+
+                      {inputKind === "enum" && (
+                        <SafeSelect
+                          label={entry.key}
+                          selected={JSON.stringify(entry.value)}
+                          items={enumOptions.map((option) => ({
+                            value: JSON.stringify(option),
+                            label: String(option),
+                          }))}
+                          error={entry.error}
+                          onSelect={(value) =>
+                            onUpdate(entry.key, {
+                              value: JSON.parse(value) as JsonValue,
+                              error: undefined,
+                            })
+                          }
+                        />
+                      )}
+
+                      {inputKind === "json" && (
+                        <textarea
+                          aria-label={entry.key}
+                          style={{ ...inputStyle, fontFamily: "monospace", minHeight: 90 }}
+                          value={entry.draft ?? valueToDraft(entry.value)}
+                          onChange={(event) => {
+                            const nextDraft = event.target.value;
+                            try {
+                              onUpdate(entry.key, {
+                                draft: nextDraft,
+                                value: JSON.parse(nextDraft) as JsonValue,
+                                error: undefined,
+                              });
+                            } catch {
+                              onUpdate(entry.key, {
+                                draft: nextDraft,
+                                error: "Enter valid JSON.",
+                              });
+                            }
+                          }}
+                        />
+                      )}
+
+                      {entry.error && (
+                        <div
+                          style={{
+                            fontSize: 12,
+                            color: "var(--sp-feedback-danger-text)",
+                          }}
+                        >
+                          {entry.error}
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                      {canRemove && (
+                        <Tooltip content={`Remove ${entry.key}`}>
+                          <button
+                            type="button"
+                            aria-label={`Remove ${entry.key}`}
+                            style={{
+                              width: "var(--sp-form-remove-button-width)",
+                              height: "var(--sp-form-remove-button-height)",
+                              border: "1px solid var(--sp-form-remove-button-border)",
+                              borderRadius: "var(--sp-form-remove-button-radius)",
+                              background: "var(--sp-form-remove-button-bg)",
+                              color: "var(--sp-form-remove-button-text)",
+                              boxShadow: "var(--sp-form-remove-button-shadow)",
+                              cursor:
+                                entry.required || entry.locked ? "not-allowed" : "pointer",
+                              opacity: entry.required || entry.locked ? 0.45 : 1,
+                              padding: 0,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              flex: "0 0 auto",
+                              transition:
+                                "border-color 180ms ease, background 180ms ease, color 180ms ease, transform 180ms ease",
+                            }}
+                            onClick={() => onRemove(entry.key)}
+                            disabled={entry.required || entry.locked}
+                          >
+                            <TrashIcon />
+                          </button>
+                        </Tooltip>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
             })}
-            <AddOptionMenu
-              label={addLabel}
-              options={selectOptions}
-              selectedValues={entries.map((entry) => entry.key)}
-              onSelect={onAdd}
-            />
           </>
         )}
       </div>
@@ -635,6 +598,10 @@ export function StructuredContextOverrideForm({
   showOverrideFields = true,
   showLockedScope = true,
   showValidationErrors = false,
+  canAddContext = true,
+  canRemoveContext = true,
+  canAddOverride = true,
+  canRemoveOverride = true,
   onAddContextKey,
   onUpdateContextEntry,
   onRemoveContextKey,
@@ -671,7 +638,7 @@ export function StructuredContextOverrideForm({
   );
 
   return (
-    <div style={{ display: "grid", gap: 18 }}>
+    <div style={{ display: "grid", gap: "var(--sp-space-md)" }}>
       {showLockedScope && lockedScope && Object.keys(lockedScope).length > 0 && (
         <div
           style={{
@@ -704,6 +671,8 @@ export function StructuredContextOverrideForm({
           entries={normalizeEntries(contextEntries)}
           addLabel="Add Context"
           selectOptions={availableDimensions}
+          canAdd={canAddContext}
+          canRemove={canRemoveContext}
           validationMessage={
             showValidationErrors && contextEntries.length === 0
               ? "Select at least one context condition."
@@ -722,6 +691,8 @@ export function StructuredContextOverrideForm({
           entries={overrideEntries}
           addLabel="Add Override"
           selectOptions={availableConfigKeys}
+          canAdd={canAddOverride}
+          canRemove={canRemoveOverride}
           validationMessage={
             showValidationErrors && overrideEntries.length === 0
               ? "Select at least one override value."

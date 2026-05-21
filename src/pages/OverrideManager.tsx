@@ -24,6 +24,7 @@ import {
   matchesPrefix,
   mergeScopedContext,
   normalizeFilterValues,
+  paginateRows,
 } from "../utils";
 import { contextCanBeEditedInScope } from "../utils/context-filter";
 import {
@@ -66,34 +67,6 @@ function entryFromOverrideValue(
   };
 }
 
-function EditIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 20 20"
-      width="var(--sp-icon-size)"
-      height="var(--sp-icon-size)"
-      style={{ color: "var(--sp-icon-color)", flex: "0 0 auto" }}
-    >
-      <path
-        d="M4.25 14.75 5 11.5 12.7 3.8a1.7 1.7 0 0 1 2.4 0l1.1 1.1a1.7 1.7 0 0 1 0 2.4l-7.7 7.7-3.25.75a.85.85 0 0 1-1-1Z"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="1.7"
-      />
-      <path
-        d="m11.55 4.95 3.5 3.5"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeWidth="1.7"
-      />
-    </svg>
-  );
-}
-
 function ChangeInfoIcon() {
   return (
     <svg
@@ -107,6 +80,22 @@ function ChangeInfoIcon() {
       <circle cx="7" cy="10" r="1" fill="var(--sp-color-panel)" />
       <circle cx="10" cy="10" r="1" fill="var(--sp-color-panel)" />
       <circle cx="13" cy="10" r="1" fill="var(--sp-color-panel)" />
+    </svg>
+  );
+}
+
+function MoreIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 20 20"
+      width="var(--sp-icon-size)"
+      height="var(--sp-icon-size)"
+      style={{ color: "var(--sp-icon-color)", flex: "0 0 auto" }}
+    >
+      <circle cx="10" cy="4.5" r="1.4" fill="currentColor" />
+      <circle cx="10" cy="10" r="1.4" fill="currentColor" />
+      <circle cx="10" cy="15.5" r="1.4" fill="currentColor" />
     </svg>
   );
 }
@@ -173,23 +162,6 @@ function formatErrorMessage(error: string): string {
   return detail ? `API error ${status}. ${detail}` : `API error ${status}.`;
 }
 
-function DeleteIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      width="var(--sp-icon-size)"
-      height="var(--sp-icon-size)"
-      style={{ color: "currentColor", flex: "0 0 auto" }}
-    >
-      <path
-        d="M17 6h5v2h-2v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8H2V6h5V3a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v3ZM6 8v12h12V8H6Zm3 3h2v6H9v-6Zm4 0h2v6h-2v-6ZM9 4v2h6V4H9Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
-
 function InfoBlock({
   icon,
   label,
@@ -236,17 +208,13 @@ function OverrideCard({
   lockedDims,
   canEdit,
   canEditRow,
-  canDelete,
   onEdit,
-  onDelete,
 }: {
   row: ContextOverride;
   lockedDims: string[];
   canEdit: boolean;
   canEditRow: boolean;
-  canDelete: boolean;
   onEdit: (row: ContextOverride) => void;
-  onDelete: (row: ContextOverride) => void;
 }) {
   const [showChangeInfo, setShowChangeInfo] = useState(false);
   const overrideEntries = Object.entries(row.override_);
@@ -257,11 +225,10 @@ function OverrideCard({
         border: "1px solid var(--sp-color-border)",
         borderRadius: "var(--sp-card-radius)",
         background: "var(--sp-color-panel)",
-        boxShadow:
-          "0 16px 42px color-mix(in oklab, var(--sp-color-text) 6%, transparent)",
-        padding: "calc(var(--sp-space-lg) * 1.25)",
+        boxShadow: "var(--sp-shadow-sm)",
         display: "grid",
-        gap: "calc(var(--sp-space-lg) * 1.1)",
+        overflow: "hidden",
+        padding: "var(--sp-space-lg)",
       }}
     >
       <div
@@ -275,13 +242,19 @@ function OverrideCard({
         <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
           <div
             style={{
-              padding: "10px 18px",
-              borderRadius: "var(--sp-control-radius)",
+              minHeight: 44,
+              display: "inline-flex",
+              alignItems: "center",
+              padding: "0 20px",
               border: "1px solid var(--sp-color-border)",
+              borderRadius: "var(--sp-control-radius)",
               background: "var(--sp-color-panel)",
+              boxShadow:
+                "0 8px 18px color-mix(in oklab, var(--sp-color-text) 10%, transparent)",
               fontWeight: 800,
-              fontSize: "1.05rem",
-              lineHeight: 1.1,
+              fontSize: "1rem",
+              lineHeight: 1.2,
+              color: "var(--sp-color-text)",
             }}
           >
             Condition
@@ -289,93 +262,81 @@ function OverrideCard({
           <Tooltip content="View change information">
             <button
               type="button"
+              className="sp-button sp-button-secondary"
               aria-label={`View change information for ${row.id}`}
               style={{
                 ...buttonSecondary,
                 width: 32,
-                height: 28,
+                height: 32,
                 padding: 0,
                 display: "inline-flex",
                 alignItems: "center",
                 justifyContent: "center",
                 borderRadius: "var(--sp-inline-radius)",
-                borderColor: "transparent",
-                background: "transparent",
+                borderColor: "var(--sp-color-border)",
+                background: "var(--sp-color-panel)",
                 boxShadow: "none",
+                cursor: "pointer",
+                transition: "background 180ms ease, border-color 180ms ease",
               }}
-              onClick={() => setShowChangeInfo(true)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowChangeInfo(true);
+              }}
             >
               <ChangeInfoIcon />
             </button>
           </Tooltip>
         </div>
-        {((canEdit && canEditRow) || canDelete) && (
+        {canEdit && canEditRow && (
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            {canEdit && canEditRow && (
-              <Tooltip content="Edit override">
-                <button
-                  type="button"
-                  aria-label={`Edit override ${row.id}`}
-                  style={{
-                    ...buttonSecondary,
-                    width: 40,
-                    height: 36,
-                    padding: 0,
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderRadius: "var(--sp-inline-radius)",
-                    borderColor: "var(--sp-color-border)",
-                    background: "var(--sp-color-panel)",
-                    boxShadow: "none",
-                  }}
-                  onClick={() => onEdit(row)}
-                >
-                  <EditIcon />
-                </button>
-              </Tooltip>
-            )}
-            {canDelete && (
-              <Tooltip content="Delete override">
-                <button
-                  type="button"
-                  aria-label={`Delete override ${row.id}`}
-                  style={{
-                    ...buttonSecondary,
-                    width: 40,
-                    height: 36,
-                    padding: 0,
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderRadius: "var(--sp-inline-radius)",
-                    color: "var(--sp-form-remove-button-text)",
-                    borderColor: "var(--sp-form-remove-button-border)",
-                    background: "var(--sp-form-remove-button-bg)",
-                    boxShadow: "none",
-                  }}
-                  onClick={() => onDelete(row)}
-                >
-                  <DeleteIcon />
-                </button>
-              </Tooltip>
-            )}
+            <Tooltip content="Edit override">
+              <button
+                type="button"
+                className="sp-button sp-button-secondary"
+                aria-label={`Edit override ${row.id}`}
+                style={{
+                  ...buttonSecondary,
+                  width: 44,
+                  height: 44,
+                  padding: 0,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: "var(--sp-inline-radius)",
+                  borderColor: "transparent",
+                  background: "var(--sp-color-surface-muted)",
+                  boxShadow: "none",
+                  cursor: "pointer",
+                  transition: "background 180ms ease, border-color 180ms ease",
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(row);
+                }}
+              >
+                <MoreIcon />
+              </button>
+            </Tooltip>
           </div>
         )}
       </div>
 
       <div
         style={{
-          paddingLeft: 0,
-          minHeight: 82,
-          display: "flex",
-          alignItems: "center",
+          minWidth: 0,
+          padding: "var(--sp-space-lg) 0 0",
         }}
       >
         <ConditionBadges condition={row.value} lockedKeys={lockedDims} showConjunction />
       </div>
 
-      <div style={{ overflowX: "auto" }}>
+      <div
+        style={{
+          overflowX: "auto",
+          paddingTop: "var(--sp-space-md)",
+        }}
+      >
         <table
           style={{
             width: "100%",
@@ -390,15 +351,15 @@ function OverrideCard({
               <th
                 aria-label="Index"
                 style={{
-                  width: 72,
-                  padding: "12px 14px",
+                  width: 80,
+                  padding: "12px 18px",
                   borderBottom: "1px solid var(--sp-color-border)",
                 }}
               />
               <th
                 style={{
                   textAlign: "left",
-                  padding: "12px 14px",
+                  padding: "12px 18px",
                   borderBottom: "1px solid var(--sp-color-border)",
                   fontSize: "1rem",
                   fontWeight: 800,
@@ -409,11 +370,10 @@ function OverrideCard({
               <th
                 style={{
                   textAlign: "left",
-                  padding: "12px 14px",
+                  padding: "12px 18px",
                   borderBottom: "1px solid var(--sp-color-border)",
-                  borderLeft: "1px solid var(--sp-color-border)",
                   boxShadow:
-                    "-8px 0 14px -14px color-mix(in oklab, var(--sp-color-text) 45%, transparent)",
+                    "-10px 0 16px -16px color-mix(in oklab, var(--sp-color-text) 54%, transparent)",
                   fontSize: "1rem",
                   fontWeight: 800,
                 }}
@@ -427,17 +387,18 @@ function OverrideCard({
               <tr key={key}>
                 <td
                   style={{
-                    width: 72,
-                    padding: "16px 14px",
+                    width: 80,
+                    padding: "18px",
                     borderBottom: "1px solid var(--sp-color-border)",
                     color: "var(--sp-color-text)",
+                    fontWeight: 500,
                   }}
                 >
                   {index + 1}
                 </td>
                 <td
                   style={{
-                    padding: "16px 14px",
+                    padding: "18px",
                     borderBottom: "1px solid var(--sp-color-border)",
                     fontWeight: 400,
                   }}
@@ -446,11 +407,10 @@ function OverrideCard({
                 </td>
                 <td
                   style={{
-                    padding: "16px 14px",
+                    padding: "18px",
                     borderBottom: "1px solid var(--sp-color-border)",
-                    borderLeft: "1px solid var(--sp-color-border)",
                     boxShadow:
-                      "-8px 0 14px -14px color-mix(in oklab, var(--sp-color-text) 45%, transparent)",
+                      "-10px 0 16px -16px color-mix(in oklab, var(--sp-color-text) 54%, transparent)",
                     fontWeight: 400,
                     wordBreak: "break-word",
                   }}
@@ -485,7 +445,7 @@ function OverrideManagerContent({
   defaultConfigPrefix,
 }: OverrideManagerProps) {
   const { overrides, config, scope, defaultConfigs, dimensions } = useSuperposition();
-  const { addAlert, confirmAction } = useAlerts();
+  const { addAlert } = useAlerts();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [showEditor, setShowEditor] = useState(false);
@@ -503,7 +463,6 @@ function OverrideManagerContent({
   const canEditContext = config.capabilities?.overrides?.editContext === true;
   const canCreate = canUseFeatureAction(config, "overrides", "create");
   const canEdit = canUseFeatureAction(config, "overrides", "update");
-  const canDelete = canUseFeatureAction(config, "overrides", "delete");
   const lockDimensions = config.scope?.locked !== false;
   const lockedDims = lockDimensions ? scope.lockedDimensions : [];
   const defaultConfigPrefixes = useMemo(
@@ -556,11 +515,19 @@ function OverrideManagerContent({
       .filter((row): row is ContextOverride => Boolean(row));
   }, [data, defaultConfigPrefixes]);
 
+  const shouldClientPage = Boolean(data && filteredData.length > pageSize);
+  const totalPages = shouldClientPage
+    ? Math.ceil(filteredData.length / pageSize)
+    : (data?.total_pages ?? 0);
+  const rows = shouldClientPage
+    ? paginateRows(filteredData, page, pageSize)
+    : filteredData;
+
   useEffect(() => {
-    if (data && page > 1 && page > (data.total_pages || 1)) {
-      setPage(Math.max(1, data.total_pages || 1));
+    if (page > 1 && page > Math.max(1, totalPages)) {
+      setPage(Math.max(1, totalPages));
     }
-  }, [data, page]);
+  }, [page, totalPages]);
 
   const defaultConfigOptions = useMemo(
     () =>
@@ -635,37 +602,6 @@ function OverrideManagerContent({
     setNewReason("");
     setFormSubmitted(false);
   }, []);
-
-  const deleteMutation = useMutation(
-    useCallback(
-      async (id: string) => {
-        await overrides.delete(id);
-        addAlert("success", getMessage(config, "overrides.deleted", "Override deleted"));
-      },
-      [overrides, addAlert, config],
-    ),
-  );
-
-  const handleDelete = useCallback(
-    async (row: ContextOverride) => {
-      const confirmed = await confirmAction({
-        title: `Delete override?`,
-        description: "This will permanently remove this override.",
-        confirmLabel: "Delete",
-        cancelLabel: "Cancel",
-        variant: "destructive",
-      });
-      if (!confirmed) return;
-
-      try {
-        await deleteMutation.mutate(row.id);
-        refetch();
-      } catch {
-        addAlert("error", deleteMutation.error || "Failed to delete override");
-      }
-    },
-    [confirmAction, deleteMutation, addAlert, refetch],
-  );
 
   const addContextKey = useCallback(
     (key: string) => {
@@ -806,14 +742,12 @@ function OverrideManagerContent({
       addAlert(
         "error",
         saveMutation.error ||
-          (editingOverride ? "Failed to update override" : "Failed to create override"),
+        (editingOverride ? "Failed to update override" : "Failed to create override"),
       );
     }
   };
 
-  const rows = filteredData;
   const hasRows = rows.length > 0;
-  const totalPages = data?.total_pages ?? 0;
   const trimmedSearch = search.trim();
   const canSave = editingOverride ? canEdit : canCreate;
   const reasonError =
@@ -824,7 +758,17 @@ function OverrideManagerContent({
   const showSearch = hasRows || Boolean(trimmedSearch);
   const renderCreateOverrideAction = () =>
     canCreate ? (
-      <button style={buttonPrimary} onClick={openCreateModal}>
+      <button
+        className="sp-button sp-button-primary sp-create-override-button"
+        style={{
+          ...buttonPrimary,
+          minHeight: 42,
+          padding: "0 18px",
+          borderColor:
+            "color-mix(in oklab, var(--sp-color-primary) 76%, var(--sp-color-border))",
+        }}
+        onClick={openCreateModal}
+      >
         {getMessage(config, "overrides.create", "Create override")}
       </button>
     ) : undefined;
@@ -842,7 +786,7 @@ function OverrideManagerContent({
   const errorDescription = error ? formatErrorMessage(error) : undefined;
 
   return (
-    <div style={{ display: "grid", gap: 20 }}>
+    <div style={{ display: "grid", gap: "var(--sp-space-lg)" }}>
       <div
         style={{
           display: "flex",
@@ -856,7 +800,7 @@ function OverrideManagerContent({
           style={{
             margin: "var(--sp-page-title-margin)",
             fontSize: "var(--sp-page-title-font-size)",
-            lineHeight: 1.08,
+            lineHeight: 1.12,
             fontWeight: "var(--sp-page-title-font-weight)",
             color: "var(--sp-page-title-text)",
           }}
@@ -971,9 +915,7 @@ function OverrideManagerContent({
               lockedDims={lockedDims}
               canEdit={canEdit}
               canEditRow={contextCanBeMutated(row.value)}
-              canDelete={canDelete}
               onEdit={openEditModal}
-              onDelete={handleDelete}
             />
           ))}
         </div>
@@ -999,7 +941,12 @@ function OverrideManagerContent({
             <button style={buttonSecondary} onClick={closeEditor}>
               Cancel
             </button>
-            <button style={buttonPrimary} onClick={handleSave} disabled={saveDisabled}>
+            <button
+              className="sp-button sp-button-primary"
+              style={buttonPrimary}
+              onClick={handleSave}
+              disabled={saveDisabled}
+            >
               {saveMutation.loading
                 ? editingOverride
                   ? "Saving..."
@@ -1021,6 +968,10 @@ function OverrideManagerContent({
           showContextFields={showCreateContextFields}
           showOverrideFields={false}
           showValidationErrors={formSubmitted}
+          canAddContext={canCreate}
+          canRemoveContext={canCreate}
+          canAddOverride={canCreate}
+          canRemoveOverride={canCreate}
           onAddContextKey={addContextKey}
           onUpdateContextEntry={updateContextEntry}
           onRemoveContextKey={removeContextKey}
@@ -1081,6 +1032,10 @@ function OverrideManagerContent({
           showOverrideFields
           showLockedScope={false}
           showValidationErrors={formSubmitted}
+          canAddContext={canSave}
+          canRemoveContext={canSave}
+          canAddOverride={canSave}
+          canRemoveOverride={canSave}
           onAddContextKey={addContextKey}
           onUpdateContextEntry={updateContextEntry}
           onRemoveContextKey={removeContextKey}

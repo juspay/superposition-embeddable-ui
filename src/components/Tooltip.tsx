@@ -1,5 +1,4 @@
-import React from "react";
-import { Tooltip as BlendTooltip } from "@juspay/blend-design-system";
+import React, { useId } from "react";
 
 export interface TooltipProps {
   content: React.ReactNode;
@@ -7,9 +6,14 @@ export interface TooltipProps {
 }
 
 export function Tooltip({ content, children }: TooltipProps) {
+  const tooltipId = useId();
+
   return (
-    <BlendTooltip content={content} maxWidth="220px" showArrow>
+    <div className="sp-tooltip" aria-describedby={tooltipId} style={{ display: "inline-flex" }}>
       {children}
-    </BlendTooltip>
+      <span id={tooltipId} role="tooltip" className="sp-tooltip__bubble">
+        {content}
+      </span>
+    </div>
   );
 }

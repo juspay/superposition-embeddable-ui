@@ -127,7 +127,17 @@ export function Table<T>({
         >
           Loading...
         </span>
-        <DataTable idField="__spId" columns={[]} data={[]} isLoading />
+        <DataTable
+          idField="__spId"
+          columns={[]}
+          data={[]}
+          isLoading
+          showHeader={false}
+          showToolbar={false}
+          showSettings={false}
+          showFooter={false}
+          enableColumnManager={false}
+        />
       </div>
     );
   }
@@ -210,12 +220,12 @@ export function Table<T>({
           showToolbar={false}
           showSettings={false}
           showFooter={false}
+          enableColumnManager={false}
           isHoverable={Boolean(onRowClick)}
           onRowClick={
             onRowClick ? (tableRow) => onRowClick(tableRow.__spRow as T) : undefined
           }
           getRowStyle={() => ({ cursor: onRowClick ? "pointer" : "default" })}
-          mobileColumnsToShow={blendColumns.length}
         />
       </div>
     </div>

@@ -28,6 +28,45 @@
   touch-action: manipulation;
 }
 
+.sp-ui .sp-button {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.sp-ui .sp-create-override-button {
+  min-height: 42px !important;
+  padding: 0 18px !important;
+  border: 1.5px solid
+    color-mix(in oklab, var(--sp-color-primary) 76%, var(--sp-color-border)) !important;
+  border-radius: var(--sp-button-radius) !important;
+  background: var(--sp-button-primary-bg) !important;
+  color: var(--sp-button-primary-text) !important;
+  box-shadow: var(--sp-button-primary-shadow), 0 1px 2px
+    color-mix(in oklab, var(--sp-color-text) 14%, transparent) !important;
+  font-size: var(--sp-button-font-size) !important;
+  font-weight: 700 !important;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.sp-ui .sp-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--sp-shadow-sm);
+}
+
+.sp-ui .sp-button-primary:hover:not(:disabled) {
+  border-color: color-mix(in oklab, var(--sp-color-primary) 82%, var(--sp-color-text));
+  background: color-mix(in oklab, var(--sp-color-primary) 88%, var(--sp-color-text));
+}
+
+.sp-ui .sp-button-secondary:hover:not(:disabled) {
+  border-color: color-mix(in oklab, var(--sp-color-primary) 30%, var(--sp-color-border));
+  background: var(--sp-color-surface-muted);
+}
+
 .sp-ui :where(button:disabled) {
   cursor: not-allowed;
   opacity: var(--sp-button-disabled-opacity);
@@ -116,4 +155,278 @@
 .sp-ui :where([data-sp-scroll]) {
   scrollbar-color: color-mix(in oklab, var(--sp-color-primary) 40%, transparent)
     transparent;
+}
+
+.sp-ui .sp-tooltip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+}
+
+.sp-ui .sp-tooltip__bubble {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  z-index: 30;
+  max-width: 220px;
+  width: max-content;
+  padding: 6px 8px;
+  border: 1px solid var(--sp-tooltip-border);
+  border-radius: var(--sp-tooltip-radius);
+  background: var(--sp-tooltip-bg);
+  color: var(--sp-tooltip-text);
+  box-shadow: var(--sp-tooltip-shadow);
+  font-size: var(--sp-tooltip-font-size);
+  font-weight: 600;
+  line-height: 1.25;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, 4px);
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease;
+}
+
+.sp-ui .sp-tooltip__bubble::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  width: 8px;
+  height: 8px;
+  border-right: 1px solid var(--sp-tooltip-border);
+  border-bottom: 1px solid var(--sp-tooltip-border);
+  background: var(--sp-tooltip-bg);
+  transform: translate(-50%, -4px) rotate(45deg);
+}
+
+.sp-ui .sp-tooltip:hover .sp-tooltip__bubble,
+.sp-ui .sp-tooltip:focus-within .sp-tooltip__bubble {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.sp-ui .sp-field-card + .sp-field-card {
+  margin-top: 2px;
+}
+
+.sp-ui .sp-condition-tree {
+  position: relative;
+  display: inline-grid;
+  gap: 10px;
+  min-width: min(280px, 100%);
+  padding-left: 58px;
+  font-family: inherit;
+}
+
+.sp-ui .sp-condition-single {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  padding-left: 28px;
+  font-family: inherit;
+}
+
+.sp-ui .sp-condition-tree::before {
+  content: "";
+  position: absolute;
+  left: 28px;
+  top: 0;
+  bottom: 0;
+  width: 18px;
+  border-left: 2px solid var(--sp-color-border);
+  border-top: 2px solid var(--sp-color-border);
+  border-bottom: 2px solid var(--sp-color-border);
+  border-radius: var(--sp-inline-radius) 0 0 var(--sp-inline-radius);
+}
+
+.sp-ui .sp-condition-tree__conjunction {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  z-index: 1;
+  padding: 2px 10px;
+  border-radius: var(--sp-pill-radius);
+  background: var(--sp-color-surface-muted);
+  color: var(--sp-color-text);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.25;
+  font-family: inherit;
+  transform: translateY(-50%);
+}
+
+.sp-ui .sp-condition-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.sp-ui .sp-condition-tree .sp-condition-badges {
+  display: grid;
+  justify-items: start;
+}
+
+.sp-ui .sp-condition-badge {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  border: 1px solid color-mix(in oklab, var(--sp-color-primary) 18%, var(--sp-color-border));
+  border-radius: var(--sp-inline-radius);
+  background: var(--sp-color-panel);
+  color: var(--sp-color-text);
+  box-shadow: 0 3px 8px color-mix(in oklab, var(--sp-color-text) 10%, transparent);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.25;
+  font-family: inherit;
+}
+
+.sp-ui .sp-condition-badge-locked {
+  border-color: color-mix(in oklab, var(--sp-color-warning) 26%, var(--sp-color-border));
+  background: color-mix(in oklab, var(--sp-color-warning) 8%, var(--sp-color-panel));
+}
+
+.sp-ui .sp-condition-badge__key {
+  color: var(--sp-color-muted);
+}
+
+.sp-ui .sp-condition-badge__operator {
+  color: var(--sp-color-text);
+  font-weight: 800;
+}
+
+.sp-ui .sp-condition-badge__value {
+  color: var(--sp-color-text);
+}
+
+.sp-ui .sp-select {
+  position: relative;
+  width: 100%;
+}
+
+.sp-ui .sp-select-open {
+  z-index: 60;
+}
+
+.sp-ui .sp-select__trigger {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1.5px solid var(--sp-control-border);
+  border-radius: var(--sp-control-radius);
+  background: var(--sp-control-bg);
+  color: var(--sp-control-text);
+  box-shadow: none;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background 180ms ease;
+}
+
+.sp-ui .sp-select__trigger:hover {
+  border-color: color-mix(in oklab, var(--sp-color-primary) 34%, var(--sp-control-border));
+  background: var(--sp-color-surface-muted);
+}
+
+.sp-ui .sp-select__value,
+.sp-ui .sp-select__placeholder {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.sp-ui .sp-select__placeholder {
+  color: var(--sp-color-muted);
+}
+
+.sp-ui .sp-select__chevron {
+  color: var(--sp-color-muted);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.sp-ui .sp-select__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 60;
+  width: max(100%, 240px);
+  max-height: min(280px, 42vh);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px;
+  border: 1px solid var(--sp-dropdown-menu-border);
+  border-radius: var(--sp-dropdown-control-radius);
+  background: var(--sp-dropdown-menu-bg);
+  box-shadow: var(--sp-dropdown-menu-shadow);
+}
+
+.sp-ui .sp-select__option {
+  width: 100%;
+  min-height: 32px;
+  padding: 7px 8px;
+  display: block;
+  border: 0;
+  border-radius: var(--sp-inline-radius);
+  background: transparent;
+  color: var(--sp-color-text);
+  box-shadow: none;
+  cursor: pointer;
+  text-align: left;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.sp-ui .sp-select__option:hover,
+.sp-ui .sp-select__option[aria-selected="true"] {
+  background: var(--sp-dropdown-option-hover-bg);
+}
+
+.sp-ui .sp-select__empty,
+.sp-ui .sp-select__error {
+  padding: 7px 8px;
+  color: var(--sp-color-muted);
+  font-size: 12px;
+}
+
+.sp-ui .sp-select__error {
+  padding: 4px 0 0;
+  color: var(--sp-feedback-danger-text);
+}
+
+.sp-ui .sp-dropdown-option:hover {
+  background: var(--sp-dropdown-option-hover-bg) !important;
+}
+
+.sp-ui :where(input, textarea, select) {
+  min-height: 40px;
+  border: 1.5px solid var(--sp-control-border) !important;
+  background: var(--sp-control-bg) !important;
+}
+
+.sp-ui :where(textarea) {
+  min-height: 82px;
+}
+
+.sp-ui input:focus-visible,
+.sp-ui textarea:focus-visible,
+.sp-ui select:focus-visible {
+  border-color: var(--sp-color-primary) !important;
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--sp-color-primary) 12%, transparent) !important;
 }

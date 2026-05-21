@@ -3,6 +3,19 @@ import { resolve } from "path";
 import { defineConfig } from "vite";
 import dts from "vite-plugin-dts";
 
+const externalPackages = [
+  "react",
+  "react-dom",
+  "react-dom/client",
+  "react/jsx-runtime",
+];
+
+function isExternal(id: string) {
+  return (
+    externalPackages.includes(id) || id.startsWith("@juspay/blend-design-system")
+  );
+}
+
 export default defineConfig({
   plugins: [
     react(),
@@ -32,7 +45,7 @@ export default defineConfig({
       cssFileName: "styles",
     },
     rollupOptions: {
-      external: ["react", "react-dom", "react-dom/client", "react/jsx-runtime"],
+      external: isExternal,
       output: {
         globals: {
           react: "React",

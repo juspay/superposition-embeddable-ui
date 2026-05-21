@@ -182,9 +182,12 @@ function buildResponse(body: unknown) {
   };
 }
 
-function chooseFromDropdown(label: string, value: string) {
-  fireEvent.click(screen.getByRole("button", { name: label }));
-  fireEvent.click(screen.getByRole("option", { name: value }));
+async function chooseFromDropdown(label: string, value: string) {
+  const trigger = screen.getByRole("button", { name: label });
+  fireEvent.click(trigger);
+  fireEvent.keyDown(trigger, { key: "Enter", code: "Enter" });
+  fireEvent.keyUp(trigger, { key: "Enter", code: "Enter" });
+  fireEvent.click(await screen.findByRole("option", { name: value }));
 }
 
 describe("OverrideManager", () => {
@@ -253,7 +256,37 @@ describe("OverrideManager", () => {
       expect(screen.getByRole("heading", { name: "Overrides" })).toBeDefined();
       expect(screen.getByText("US App")).toBeDefined();
     });
-    expect(screen.getAllByText("And")).toHaveLength(4);
+    expect(screen.getAllByText("And")).toHaveLength(1);
+  });
+
+  it("paginates override cards when the API returns the full dataset", async () => {
+    render(
+      <SuperpositionUIProvider config={testConfig}>
+        <AlertProvider>
+          <OverrideManager pageSize={2} />
+        </AlertProvider>
+      </SuperpositionUIProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("US App")).toBeDefined();
+      expect(screen.getByText("EU App")).toBeDefined();
+    });
+
+    expect(screen.getByText("Page 1 of 2")).toBeDefined();
+    expect(screen.queryByText("Region App")).toBeNull();
+    expect(screen.queryByText("Env App")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Page 2 of 2")).toBeDefined();
+      expect(screen.getByText("Region App")).toBeDefined();
+      expect(screen.getByText("Env App")).toBeDefined();
+    });
+
+    expect(screen.queryByText("US App")).toBeNull();
+    expect(screen.queryByText("EU App")).toBeNull();
   });
 
   it("shows the shared empty state when no overrides exist", async () => {
@@ -376,11 +409,11 @@ describe("OverrideManager", () => {
 
     fireEvent.click(await screen.findByText("Create override"));
 
-    chooseFromDropdown("Add Context", "region");
+    await chooseFromDropdown("Add Context", "region");
     fireEvent.change(screen.getByLabelText("region"), {
       target: { value: "us-east-1" },
     });
-    chooseFromDropdown("Add Override", "app.title");
+    await chooseFromDropdown("Add Override", "app.title");
     fireEvent.change(screen.getByLabelText("app.title"), {
       target: { value: "Scoped App" },
     });
@@ -452,7 +485,7 @@ describe("OverrideManager", () => {
     expect(screen.getByText("init")).toBeDefined();
   });
 
-  it("shows a concise delete confirmation without exposing the override id", async () => {
+  it("does not render delete actions in the override list", async () => {
     render(
       <SuperpositionUIProvider config={testConfig}>
         <AlertProvider>
@@ -461,11 +494,8 @@ describe("OverrideManager", () => {
       </SuperpositionUIProvider>,
     );
 
-    fireEvent.click(await screen.findByRole("button", { name: "Delete override ctx-1" }));
-
-    expect(screen.getByRole("dialog", { name: "Delete override?" })).toBeDefined();
-    expect(screen.getByText("This will permanently remove this override.")).toBeDefined();
-    expect(screen.queryByText(/context "ctx-1"/)).toBeNull();
+    expect(await screen.findByText("US App")).toBeDefined();
+    expect(screen.queryAllByRole("button", { name: /Delete override/ }).length).toBe(0);
   });
 
   it("filters overrides by scoped context", async () => {
@@ -636,7 +666,7 @@ describe("OverrideManager", () => {
     fireEvent.click(await screen.findByText("Create override"));
 
     // The scoped context (region: us-east-1) is already locked in, so just add an override
-    chooseFromDropdown("Add Override", "app.title");
+    await chooseFromDropdown("Add Override", "app.title");
     fireEvent.change(screen.getByLabelText("app.title"), {
       target: { value: "Scoped App" },
     });
@@ -692,7 +722,7 @@ describe("OverrideManager", () => {
       0,
     );
 
-    chooseFromDropdown("Add Override", "app.title");
+    await chooseFromDropdown("Add Override", "app.title");
     fireEvent.change(screen.getByLabelText("app.title"), {
       target: { value: "Scoped App" },
     });
