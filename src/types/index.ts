@@ -1,12 +1,12 @@
 import type {
-  ComponentTokenType as BlendComponentTokenType,
-  ThemeType as BlendThemeType,
+    ComponentTokenType as BlendComponentTokenType,
+    ThemeType as BlendThemeType,
 } from "@juspay/blend-design-system";
 import type React from "react";
 import type { JsonValue } from "./api";
 export * from "./api";
 
-export const SUPERPOSITION_FEATURES = ["config", "overrides", "dimensions"] as const;
+export const SUPERPOSITION_FEATURES = ["config", "overrides", "dimensions", "audit"] as const;
 
 export type SuperpositionFeature = (typeof SUPERPOSITION_FEATURES)[number];
 
@@ -14,6 +14,7 @@ export const SUPERPOSITION_FEATURE_LABELS: Record<SuperpositionFeature, string> 
   config: "Configs",
   overrides: "Overrides",
   dimensions: "Dimensions",
+  audit: "Audit Trail",
 };
 
 export type RouteMode = "internal" | "external";

@@ -12,6 +12,9 @@ export interface ModalProps {
   title: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
+  width?: string;
+  maxWidth?: string;
+  maxHeight?: string;
 }
 
 type BlendModalWithContainerEvents = React.ComponentType<
@@ -22,7 +25,16 @@ type BlendModalWithContainerEvents = React.ComponentType<
 
 const ClickableBlendModal = BlendModal as BlendModalWithContainerEvents;
 
-export function Modal({ open, onClose, title, children, footer }: ModalProps) {
+export function Modal({
+  open,
+  onClose,
+  title,
+  children,
+  footer,
+  width,
+  maxWidth,
+  maxHeight,
+}: ModalProps) {
   const context = useOptionalSuperposition();
   const ui = context?.config.ui;
   const themeStyles = useOptionalSuperpositionThemeStyles();
@@ -53,8 +65,8 @@ export function Modal({ open, onClose, title, children, footer }: ModalProps) {
       closeOnBackdropClick
       useDrawerOnMobile
       minWidth="var(--sp-modal-min-width)"
-      maxWidth="var(--sp-modal-max-width)"
-      maxHeight="var(--sp-modal-max-height)"
+      maxWidth={maxWidth ?? "var(--sp-modal-max-width)"}
+      maxHeight={maxHeight ?? "var(--sp-modal-max-height)"}
       onClick={(event) => {
         if (event.target === event.currentTarget) {
           onClose();
@@ -66,9 +78,9 @@ export function Modal({ open, onClose, title, children, footer }: ModalProps) {
         data-sp-theme={theme?.resolvedMode}
         style={{
           ...themeStyles,
-          width: "var(--sp-modal-width)",
-          maxWidth: "var(--sp-modal-max-width)",
-          maxHeight: "var(--sp-modal-max-height)",
+          width: width ?? "var(--sp-modal-width)",
+          maxWidth: maxWidth ?? "var(--sp-modal-max-width)",
+          maxHeight: maxHeight ?? "var(--sp-modal-max-height)",
           display: "flex",
           flexDirection: "column",
           background: "var(--sp-color-panel)",

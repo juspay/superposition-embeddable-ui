@@ -36,4 +36,31 @@ describe("resolveApi", () => {
     expect(init.method).toBe("GET");
     expect(init.body).toBeUndefined();
   });
+
+  it("calls GET /config for the cached config contract", async () => {
+    const api = resolveApi(client);
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      headers: new Headers({ "content-length": "200" }),
+      json: () =>
+        Promise.resolve({
+          contexts: [],
+          overrides: {},
+          default_configs: { "checkout.title": "Default title" },
+        }),
+    });
+
+    await expect(api.getConfig({ region: "ap-south-1" })).resolves.toEqual({
+      contexts: [],
+      overrides: {},
+      default_configs: { "checkout.title": "Default title" },
+    });
+
+    const [url, init] = mockFetch.mock.calls[0];
+    expect(url).toBe(
+      "https://superposition.test/config?dimension[region]=ap-south-1",
+    );
+    expect(init.method).toBe("GET");
+  });
 });

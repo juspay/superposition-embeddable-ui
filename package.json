@@ -53,6 +53,12 @@
       "require": "./dist/dimension-manager.cjs",
       "default": "./dist/dimension-manager.js"
     },
+    "./audit-trail": {
+      "types": "./dist/audit-trail.d.ts",
+      "import": "./dist/audit-trail.js",
+      "require": "./dist/audit-trail.cjs",
+      "default": "./dist/audit-trail.js"
+    },
     "./override-manager": {
       "types": "./dist/override-manager.d.ts",
       "import": "./dist/override-manager.js",

@@ -34,6 +34,7 @@ export default defineConfig({
       entry: {
         index: resolve(__dirname, "src/index.ts"),
         admin: resolve(__dirname, "src/admin.ts"),
+        "audit-trail": resolve(__dirname, "src/audit-trail.ts"),
         "config-manager": resolve(__dirname, "src/config-manager.ts"),
         "dimension-manager": resolve(__dirname, "src/dimension-manager.ts"),
         "override-manager": resolve(__dirname, "src/override-manager.ts"),

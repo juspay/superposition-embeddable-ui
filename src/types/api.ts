@@ -1,20 +1,23 @@
 import type {
-  ContextFilterSortOn,
-  ContextPut,
-  ContextResponse,
-  CreateDefaultConfigInput,
-  CreateDimensionInput,
-  DefaultConfigResponse,
-  DimensionMatchStrategy,
-  DimensionResponse,
-  DimensionType,
-  GetResolvedConfigOutput,
-  ListContextsInput,
-  ListContextsOutput,
-  ListDefaultConfigsInput,
-  SortBy,
-  UpdateDefaultConfigInput,
-  UpdateDimensionInput,
+    AuditLogFull,
+    ContextFilterSortOn,
+    ContextPut,
+    ContextResponse,
+    CreateDefaultConfigInput,
+    CreateDimensionInput,
+    DefaultConfigResponse,
+    DimensionMatchStrategy,
+    DimensionResponse,
+    DimensionType,
+    GetResolvedConfigOutput,
+    ListAuditLogsInput,
+    ListContextsInput,
+    ListContextsOutput,
+    ListDefaultConfigsInput,
+    AuditAction as SmithyAuditAction,
+    SortBy,
+    UpdateDefaultConfigInput,
+    UpdateDimensionInput,
 } from "superposition-sdk";
 
 type ServiceContextKeys = "workspace_id" | "org_id";
@@ -51,6 +54,12 @@ export type Overrides = Defined<ContextPut["override"]>;
 export type DependencyGraph = Defined<DimensionResponse["dependency_graph"]>;
 
 export type { SortBy };
+
+// ── Audit Logs ─────────────────────────────────────────────────────
+
+export type AuditAction = SmithyAuditAction;
+export type AuditLog = RawResponse<AuditLogFull, "original_data" | "new_data">;
+export type AuditLogListFilters = Omit<RequestBody<ListAuditLogsInput>, keyof PaginationParams>;
 
 // ── Pagination ─────────────────────────────────────────────────────
 
@@ -107,7 +116,10 @@ export type ContextListFilters = Pick<
 export interface Config {
   contexts: ContextOverride[];
   overrides: Record<string, Record<string, JsonValue>>;
-  default_configs: Record<string, DefaultConfig>;
+  default_configs: Record<string, JsonValue>;
+  dimensions?: Record<string, JsonValue>;
+  version?: string;
+  last_modified?: ApiTimestamp;
 }
 
 export type ResolvedConfigResponse = GetResolvedConfigOutput;

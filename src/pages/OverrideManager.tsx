@@ -1,5 +1,11 @@
 import type React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Button,
+  ButtonSize,
+  ButtonSubType,
+  ButtonType,
+} from "@juspay/blend-design-system";
 import type { FieldEntryState } from "../components";
 import {
   buttonPrimary,
@@ -84,7 +90,7 @@ function ChangeInfoIcon() {
   );
 }
 
-function MoreIcon() {
+function PencilIcon() {
   return (
     <svg
       aria-hidden="true"
@@ -93,9 +99,63 @@ function MoreIcon() {
       height="var(--sp-icon-size)"
       style={{ color: "var(--sp-icon-color)", flex: "0 0 auto" }}
     >
-      <circle cx="10" cy="4.5" r="1.4" fill="currentColor" />
-      <circle cx="10" cy="10" r="1.4" fill="currentColor" />
-      <circle cx="10" cy="15.5" r="1.4" fill="currentColor" />
+      <path
+        d="M4.25 14.75 5 11.5 12.7 3.8a1.7 1.7 0 0 1 2.4 0l1.1 1.1a1.7 1.7 0 0 1 0 2.4l-7.7 7.7-3.25.75a.85.85 0 0 1-1-1Z"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.7"
+      />
+      <path
+        d="m11.55 4.95 3.5 3.5"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.7"
+      />
+    </svg>
+  );
+}
+
+function FilterIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 20 20"
+      width="var(--sp-icon-size)"
+      height="var(--sp-icon-size)"
+      style={{ color: "var(--sp-color-primary)", flex: "0 0 auto" }}
+    >
+      <path
+        d="M3.4 4.9c-.4-.5 0-1.2.6-1.2h12c.6 0 1 .7.6 1.2L12 10.5v4.1c0 .3-.2.6-.4.7l-2.4 1.2c-.5.2-1-.1-1-.7v-5.3L3.4 4.9Z"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.7"
+      />
+    </svg>
+  );
+}
+
+function ChevronUpIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 20 20"
+      width={16}
+      height={16}
+      style={{ flex: "0 0 auto" }}
+    >
+      <path
+        d="m5.5 12 4.5-4.5 4.5 4.5"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.9"
+      />
     </svg>
   );
 }
@@ -149,9 +209,141 @@ function HistoryIcon() {
   );
 }
 
+function CalendarIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 20 20"
+      width="var(--sp-icon-size)"
+      height="var(--sp-icon-size)"
+      style={{ color: "var(--sp-color-primary)", flex: "0 0 auto" }}
+    >
+      <rect
+        x="3.5"
+        y="4.5"
+        width="13"
+        height="12"
+        rx="2"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.7"
+      />
+      <path
+        d="M6.5 3.2v3M13.5 3.2v3M3.8 8h12.4"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.7"
+      />
+    </svg>
+  );
+}
+
+function ChevronDownIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 20 20"
+      width={16}
+      height={16}
+      style={{ flex: "0 0 auto" }}
+    >
+      <path
+        d="m5.5 8 4.5 4.5L14.5 8"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.9"
+      />
+    </svg>
+  );
+}
+
 function jsonCellValue(value: JsonValue) {
   if (typeof value === "string") return value;
   return JSON.stringify(value) ?? String(value);
+}
+
+function OverrideKeyPill({ value }: { value: string }) {
+  return (
+    <code
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        verticalAlign: "middle",
+        boxSizing: "border-box",
+        maxWidth: "100%",
+        height: 28,
+        padding: "0 10px",
+        border: "1px solid color-mix(in oklab, var(--sp-color-primary) 16%, var(--sp-color-border))",
+        borderRadius: "var(--sp-inline-radius)",
+        background:
+          "color-mix(in oklab, var(--sp-color-primary) 7%, var(--sp-color-panel))",
+        color: "var(--sp-color-primary)",
+        fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+        fontSize: "0.82rem",
+        fontWeight: 700,
+        lineHeight: 1,
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap",
+      }}
+      title={value}
+    >
+      {value}
+    </code>
+  );
+}
+
+function OverrideValuePill({ value }: { value: JsonValue }) {
+  const preview = jsonCellValue(value);
+
+  return (
+    <code
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        verticalAlign: "middle",
+        boxSizing: "border-box",
+        maxWidth: "100%",
+        height: 28,
+        padding: "0 10px",
+        border: "1px solid var(--sp-feedback-success-border)",
+        borderRadius: "var(--sp-inline-radius)",
+        background: "var(--sp-feedback-success-bg)",
+        color: "var(--sp-feedback-success-text)",
+        fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+        fontSize: "0.82rem",
+        fontWeight: 650,
+        lineHeight: 1,
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap",
+      }}
+      title={preview}
+    >
+      {preview}
+    </code>
+  );
+}
+
+function formatChangeTimestamp(value: ContextOverride["last_modified_at"]) {
+  if (!value) return "";
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return String(value);
+
+  return parsed.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+  });
 }
 
 function formatErrorMessage(error: string): string {
@@ -171,261 +363,710 @@ function InfoBlock({
   label: string;
   value?: string;
 }) {
+  const [expanded, setExpanded] = useState(false);
+  const displayValue = value?.trim() || "Not provided";
+  const canExpand = displayValue.length > 180;
+
   return (
-    <div style={{ display: "grid", gap: "var(--sp-space-sm)" }}>
+    <section
+      style={{
+        display: "grid",
+        gridTemplateColumns: "44px minmax(0, 1fr)",
+        gap: "var(--sp-space-sm)",
+        alignItems: "start",
+      }}
+    >
+      <span
+        style={{
+          width: 38,
+          height: 38,
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          borderRadius: "var(--sp-pill-radius)",
+          background: "var(--sp-color-primary-soft)",
+          color: "var(--sp-color-primary)",
+        }}
+      >
+        {icon}
+      </span>
+      <div style={{ display: "grid", gap: "var(--sp-space-sm)", minWidth: 0 }}>
+        <h3
+          style={{
+            margin: 0,
+            color: "var(--sp-color-text)",
+            fontSize: "1rem",
+            lineHeight: 1.2,
+            fontWeight: 800,
+          }}
+        >
+          {label}
+        </h3>
+        <div
+          style={{
+            maxHeight: canExpand ? (expanded ? 260 : 112) : undefined,
+            overflowY: expanded ? "auto" : canExpand ? "hidden" : "visible",
+            padding: "12px 14px",
+            border: "1px solid var(--sp-color-border)",
+            borderRadius: "var(--sp-control-radius)",
+            background: "var(--sp-color-panel)",
+            color: value ? "var(--sp-color-text)" : "var(--sp-color-muted)",
+            fontSize: "0.92rem",
+            lineHeight: 1.45,
+            whiteSpace: "pre-wrap",
+            overflowWrap: "anywhere",
+          }}
+        >
+          {displayValue}
+        </div>
+        {canExpand ? (
+          <button
+            type="button"
+            style={{
+              width: "fit-content",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              padding: 0,
+              border: 0,
+              background: "transparent",
+              color: "var(--sp-color-primary)",
+              cursor: "pointer",
+              fontSize: "0.9rem",
+              fontWeight: 750,
+            }}
+            onClick={() => setExpanded((current) => !current)}
+          >
+            {expanded ? "Show less" : "Show more"}
+            {expanded ? <ChevronUpIcon /> : <ChevronDownIcon />}
+          </button>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+function ChangeMetadata({ row }: { row: ContextOverride }) {
+  const timestamp = formatChangeTimestamp(row.last_modified_at);
+  const actor = row.last_modified_by;
+  const details =
+    timestamp && actor
+      ? `${timestamp} by ${actor}`
+      : timestamp || actor || "Change metadata not available";
+
+  return (
+    <div
+      style={{
+        marginLeft: 64,
+        display: "grid",
+        gridTemplateColumns: "44px minmax(0, 1fr)",
+        alignItems: "center",
+        gap: "var(--sp-space-sm)",
+        padding: "14px 16px",
+        borderRadius: "var(--sp-control-radius)",
+        background: "var(--sp-color-surface-muted)",
+      }}
+    >
+      <span
+        style={{
+          width: 36,
+          height: 36,
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          borderRadius: "var(--sp-inline-radius)",
+          background: "var(--sp-color-primary-soft)",
+          color: "var(--sp-color-primary)",
+        }}
+      >
+        <CalendarIcon />
+      </span>
+      <div style={{ display: "grid", gap: 3, minWidth: 0 }}>
+        <span
+          style={{
+            color: "var(--sp-color-muted)",
+            fontSize: "0.82rem",
+            fontWeight: 700,
+          }}
+        >
+          Changed on
+        </span>
+        <span
+          style={{
+            color: "var(--sp-color-text)",
+            fontSize: "0.92rem",
+            fontWeight: 500,
+            overflowWrap: "anywhere",
+          }}
+        >
+          {details}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function ConditionSummary({
+  entries,
+  maxVisible = 3,
+}: {
+  entries: Array<[string, JsonValue]>;
+  maxVisible?: number;
+}) {
+  if (entries.length === 0) {
+    return (
+      <span style={{ color: "var(--sp-color-muted)", fontSize: "0.95rem" }}>
+        No conditions
+      </span>
+    );
+  }
+
+  const visibleEntries = entries.slice(0, maxVisible);
+  const remaining = entries.length - visibleEntries.length;
+  const shouldClipSummary = entries.length > 1 || remaining > 0;
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        flexWrap: "nowrap",
+        gap: 4,
+        minWidth: 0,
+        overflow: shouldClipSummary ? "hidden" : "visible",
+      }}
+    >
+      {visibleEntries.map(([key, value], index) => (
+        <div
+          key={key}
+          style={{
+            display: "contents",
+          }}
+        >
+          {index > 0 && (
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                color: "var(--sp-color-muted)",
+                fontSize: "0.72rem",
+                fontWeight: 700,
+                lineHeight: 1,
+                letterSpacing: "0.02em",
+                padding: "0 2px",
+                flex: "0 0 auto",
+              }}
+            >
+              AND
+            </span>
+          )}
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              minHeight: 28,
+              maxWidth: shouldClipSummary ? "min(100%, 320px)" : "fit-content",
+              padding: "1px 9px",
+              border: "1px solid color-mix(in oklab, var(--sp-color-primary) 12%, var(--sp-color-border))",
+              borderRadius: "var(--sp-inline-radius)",
+              background: "color-mix(in oklab, var(--sp-color-primary) 6%, var(--sp-color-panel))",
+              color: "var(--sp-color-text)",
+              fontSize: "0.8rem",
+              fontWeight: 700,
+              lineHeight: 1.2,
+              flex: shouldClipSummary ? "0 1 auto" : "0 0 auto",
+            }}
+          >
+            <span style={{ color: "var(--sp-color-text)", fontWeight: 750 }}>
+              {key}
+            </span>
+            <span style={{ color: "var(--sp-color-muted)", fontWeight: 800 }}>=</span>
+            <span
+              style={{
+                minWidth: 0,
+                overflow: shouldClipSummary ? "hidden" : "visible",
+                textOverflow: shouldClipSummary ? "ellipsis" : "clip",
+                whiteSpace: "nowrap",
+                fontWeight: 550,
+              }}
+            >
+              {jsonCellValue(value)}
+            </span>
+          </span>
+        </div>
+      ))}
+      {remaining > 0 && (
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            minHeight: 24,
+            padding: "0 8px",
+            borderRadius: "var(--sp-inline-radius)",
+            background: "color-mix(in oklab, var(--sp-color-primary) 8%, var(--sp-color-panel))",
+            color: "var(--sp-color-primary)",
+            fontSize: "0.76rem",
+            fontWeight: 800,
+            lineHeight: 1,
+            flex: "0 0 auto",
+          }}
+        >
+          +{remaining} more
+        </span>
+      )}
+    </div>
+  );
+}
+
+function ReadOnlyConditionRows({ entries }: { entries: Array<[string, JsonValue]> }) {
+  if (entries.length === 0) {
+    return (
+      <div
+        style={{
+          padding: "var(--sp-space-md)",
+          border: "1px dashed var(--sp-color-border)",
+          borderRadius: "var(--sp-control-radius)",
+          color: "var(--sp-color-muted)",
+          fontSize: "0.95rem",
+        }}
+      >
+        No conditions
+      </div>
+    );
+  }
+
+  return (
+    <div
+      style={{
+        display: "grid",
+          gap: "var(--sp-space-sm)",
+      }}
+    >
       <div
         style={{
           display: "flex",
           alignItems: "center",
-          gap: "var(--sp-space-sm)",
-          fontSize: "1rem",
-          fontWeight: 700,
+            gap: "var(--sp-space-sm)",
+          flexWrap: "wrap",
         }}
       >
-        {icon}
-        {label}
+        <div
+          style={{
+            minWidth: 80,
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            color: "var(--sp-color-muted)",
+            fontSize: "0.82rem",
+            fontWeight: 800,
+          }}
+        >
+          Logic
+          <InfoIcon />
+        </div>
+        <div style={{ ...readOnlyControlStyle, minWidth: 160 }}>AND</div>
       </div>
-      <div
+      <div style={{ overflowX: "auto" }}>
+        <div
+          style={{
+            display: "grid",
+              minWidth: 560,
+              gap: 10,
+          }}
+        >
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "minmax(140px, 1fr) minmax(120px, 0.75fr) minmax(180px, 2fr)",
+                gap: 10,
+              color: "var(--sp-color-muted)",
+                fontSize: "0.8rem",
+              fontWeight: 800,
+            }}
+          >
+            <div>Field</div>
+            <div>Operator</div>
+            <div>Value</div>
+          </div>
+          {entries.map(([key, value]) => (
+            <div
+              key={key}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "minmax(140px, 1fr) minmax(120px, 0.75fr) minmax(180px, 2fr)",
+                gap: 10,
+                alignItems: "center",
+              }}
+            >
+              <div style={readOnlyControlStyle}>{key}</div>
+              <div style={readOnlyControlStyle}>==</div>
+              <div style={{ ...readOnlyControlStyle, wordBreak: "break-word" }}>
+                {jsonCellValue(value)}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const readOnlyControlStyle: React.CSSProperties = {
+  minHeight: 36,
+  display: "flex",
+  alignItems: "center",
+  padding: "0 12px",
+  border: "1px solid var(--sp-color-border)",
+  borderRadius: "var(--sp-control-radius)",
+  background: "var(--sp-color-panel)",
+  color: "var(--sp-color-text)",
+  fontSize: "0.88rem",
+  fontWeight: 500,
+  boxShadow: "0 1px 0 color-mix(in oklab, var(--sp-color-text) 3%, transparent)",
+};
+
+function OverrideValuesTable({ entries }: { entries: Array<[string, JsonValue]> }) {
+  const rowPadding = entries.length === 1 ? "6px 12px" : "8px 12px";
+
+  return (
+    <div
+      style={{
+        overflowX: "auto",
+        paddingTop: 0,
+      }}
+    >
+      <table
         style={{
-          minHeight: 48,
-          padding: "var(--sp-space-md)",
-          border: "1px solid var(--sp-color-border)",
-          borderRadius: "var(--sp-control-radius)",
-          background: "var(--sp-color-surface-muted)",
-          color: value ? "var(--sp-color-text)" : "var(--sp-color-muted)",
-          fontSize: "1rem",
-          lineHeight: 1.45,
+          width: "100%",
+          minWidth: 460,
+          borderCollapse: "separate",
+          borderSpacing: 0,
+          tableLayout: "fixed",
+          color: "var(--sp-color-text)",
         }}
       >
-        {value || "Not provided"}
-      </div>
+        <colgroup>
+          <col style={{ width: 56 }} />
+          <col style={{ width: "44%" }} />
+          <col style={{ width: "56%" }} />
+        </colgroup>
+        <thead>
+          <tr>
+            <th
+              aria-label="Index"
+              style={{
+                padding: "6px 12px",
+                borderBottom: "1px solid var(--sp-color-border)",
+              }}
+            />
+            <th
+              style={{
+                textAlign: "left",
+                padding: "6px 12px",
+                borderBottom: "1px solid var(--sp-color-border)",
+                fontSize: "0.8rem",
+                fontWeight: 800,
+                color: "var(--sp-color-muted)",
+              }}
+            >
+              Key
+            </th>
+            <th
+              style={{
+                textAlign: "left",
+                padding: "6px 12px",
+                borderBottom: "1px solid var(--sp-color-border)",
+                boxShadow:
+                  "-10px 0 16px -16px color-mix(in oklab, var(--sp-color-text) 54%, transparent)",
+                fontSize: "0.8rem",
+                fontWeight: 800,
+                color: "var(--sp-color-muted)",
+              }}
+            >
+              Value
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {entries.map(([key, value], index) => (
+            <tr key={key}>
+              <td
+                style={{
+                  padding: rowPadding,
+                  borderBottom: "1px solid var(--sp-color-border)",
+                  color: "var(--sp-color-muted)",
+                  fontSize: "0.78rem",
+                  fontWeight: 500,
+                  verticalAlign: "middle",
+                }}
+              >
+                {index + 1}
+              </td>
+              <td
+                style={{
+                  padding: rowPadding,
+                  borderBottom: "1px solid var(--sp-color-border)",
+                  fontSize: "0.86rem",
+                  fontWeight: 600,
+                  verticalAlign: "middle",
+                }}
+              >
+                <OverrideKeyPill value={key} />
+              </td>
+              <td
+                style={{
+                  padding: rowPadding,
+                  borderBottom: "1px solid var(--sp-color-border)",
+                  boxShadow:
+                    "-10px 0 16px -16px color-mix(in oklab, var(--sp-color-text) 54%, transparent)",
+                  fontSize: "0.86rem",
+                  fontWeight: 500,
+                  wordBreak: "break-word",
+                    verticalAlign: "middle",
+                }}
+              >
+                <OverrideValuePill value={value} />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
 
 function OverrideCard({
   row,
-  lockedDims,
   canEdit,
   canEditRow,
   onEdit,
 }: {
   row: ContextOverride;
-  lockedDims: string[];
   canEdit: boolean;
   canEditRow: boolean;
   onEdit: (row: ContextOverride) => void;
 }) {
   const [showChangeInfo, setShowChangeInfo] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const overrideEntries = Object.entries(row.override_);
+  const conditionEntries = Object.entries(row.value);
 
   return (
     <article
+      className="sp-override-card"
       style={{
         border: "1px solid var(--sp-color-border)",
         borderRadius: "var(--sp-card-radius)",
         background: "var(--sp-color-panel)",
         boxShadow: "var(--sp-shadow-sm)",
         display: "grid",
+        gap: 2,
         overflow: "hidden",
-        padding: "var(--sp-space-lg)",
+        padding: "10px 14px",
+        transition: "border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease",
       }}
     >
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
-          alignItems: "flex-start",
-          gap: "var(--sp-space-md)",
+          alignItems: "center",
+          gap: 12,
+          flexWrap: "wrap",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "36px minmax(0, 1fr)",
+            alignItems: "center",
+            columnGap: 10,
+            minWidth: 0,
+            flex: "1 1 auto",
+          }}
+        >
           <div
             style={{
-              minHeight: 44,
+              width: 36,
+              height: 36,
               display: "inline-flex",
               alignItems: "center",
-              padding: "0 20px",
-              border: "1px solid var(--sp-color-border)",
+              justifyContent: "center",
               borderRadius: "var(--sp-control-radius)",
-              background: "var(--sp-color-panel)",
-              boxShadow:
-                "0 8px 18px color-mix(in oklab, var(--sp-color-text) 10%, transparent)",
-              fontWeight: 800,
-              fontSize: "1rem",
-              lineHeight: 1.2,
-              color: "var(--sp-color-text)",
+              background:
+                "color-mix(in oklab, var(--sp-color-primary) 8%, var(--sp-color-panel))",
+              flex: "0 0 auto",
             }}
           >
-            Condition
+            <FilterIcon />
           </div>
-          <Tooltip content="View change information">
-            <button
-              type="button"
-              className="sp-button sp-button-secondary"
-              aria-label={`View change information for ${row.id}`}
+          <div style={{ display: "grid", gap: 4, minWidth: 0 }}>
+            <div
               style={{
-                ...buttonSecondary,
-                width: 32,
-                height: 32,
-                padding: 0,
-                display: "inline-flex",
+                display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
-                borderRadius: "var(--sp-inline-radius)",
-                borderColor: "var(--sp-color-border)",
-                background: "var(--sp-color-panel)",
-                boxShadow: "none",
-                cursor: "pointer",
-                transition: "background 180ms ease, border-color 180ms ease",
-              }}
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowChangeInfo(true);
+                gap: 6,
+                minWidth: 0,
+                flexWrap: "wrap",
               }}
             >
-              <ChangeInfoIcon />
-            </button>
-          </Tooltip>
+              <h3
+                style={{
+                  margin: 0,
+                  color: "var(--sp-color-text)",
+                  fontSize: "0.98rem",
+                  fontWeight: 800,
+                  lineHeight: 1.1,
+                  flex: "0 0 auto",
+                }}
+              >
+                Condition
+              </h3>
+              {expanded ? (
+                <div style={{ minWidth: 0, flex: "1 1 auto" }}>
+                  <ConditionSummary entries={conditionEntries} />
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  aria-label={`Expand conditions for ${row.id}`}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    minWidth: 0,
+                    maxWidth: "100%",
+                    padding: 0,
+                    border: 0,
+                    background: "transparent",
+                    cursor: "pointer",
+                    textAlign: "left",
+                    flex: "0 1 auto",
+                  }}
+                  onClick={() => setExpanded(true)}
+                >
+                  <ConditionSummary entries={conditionEntries} />
+                </button>
+              )}
+            </div>
+          </div>
         </div>
-        {canEdit && canEditRow && (
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <Tooltip content="Edit override">
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "flex-end",
+            gap: 8,
+            flex: "0 0 auto",
+          }}
+        >
+            <Tooltip content="View change information">
               <button
                 type="button"
                 className="sp-button sp-button-secondary"
-                aria-label={`Edit override ${row.id}`}
+                aria-label={`View change information for ${row.id}`}
                 style={{
                   ...buttonSecondary,
-                  width: 44,
-                  height: 44,
+                  width: 32,
+                  height: 32,
+                  minHeight: 32,
                   padding: 0,
                   display: "inline-flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  borderRadius: "var(--sp-inline-radius)",
-                  borderColor: "transparent",
-                  background: "var(--sp-color-surface-muted)",
+                  borderRadius: "var(--sp-control-radius)",
+                  borderColor: "var(--sp-color-border)",
+                  background: "var(--sp-color-panel)",
                   boxShadow: "none",
                   cursor: "pointer",
                   transition: "background 180ms ease, border-color 180ms ease",
                 }}
                 onClick={(e) => {
                   e.stopPropagation();
-                  onEdit(row);
+                  setShowChangeInfo(true);
                 }}
               >
-                <MoreIcon />
+                <ChangeInfoIcon />
               </button>
             </Tooltip>
-          </div>
-        )}
+          {expanded ? (
+            <button
+              type="button"
+              aria-label={`Collapse conditions for ${row.id}`}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                  minHeight: 32,
+                padding: "0 8px",
+                border: 0,
+                background: "transparent",
+                color: "var(--sp-color-primary)",
+                cursor: "pointer",
+                  fontSize: "0.82rem",
+                fontWeight: 800,
+              }}
+              onClick={() => setExpanded(false)}
+            >
+              Collapse
+              <ChevronUpIcon />
+            </button>
+          ) : (
+            canEdit &&
+            canEditRow && (
+              <Tooltip content="Edit override">
+                <Button
+                  aria-label={`Edit override ${row.id}`}
+                  buttonType={ButtonType.SECONDARY}
+                  size={ButtonSize.SMALL}
+                  subType={ButtonSubType.ICON_ONLY}
+                  leadingIcon={<PencilIcon />}
+                  onClick={(event) => {
+                    event?.stopPropagation();
+                    onEdit(row);
+                  }}
+                />
+              </Tooltip>
+            )
+          )}
+        </div>
       </div>
 
-      <div
-        style={{
-          minWidth: 0,
-          padding: "var(--sp-space-lg) 0 0",
-        }}
-      >
-        <ConditionBadges condition={row.value} lockedKeys={lockedDims} showConjunction />
-      </div>
-
-      <div
-        style={{
-          overflowX: "auto",
-          paddingTop: "var(--sp-space-md)",
-        }}
-      >
-        <table
+      {expanded && (
+        <section
+          aria-label={`Expanded conditions for ${row.id}`}
           style={{
-            width: "100%",
-            minWidth: 520,
-            borderCollapse: "separate",
-            borderSpacing: 0,
-            color: "var(--sp-color-text)",
+            padding: "2px 0 0",
           }}
         >
-          <thead>
-            <tr>
-              <th
-                aria-label="Index"
-                style={{
-                  width: 80,
-                  padding: "12px 18px",
-                  borderBottom: "1px solid var(--sp-color-border)",
-                }}
-              />
-              <th
-                style={{
-                  textAlign: "left",
-                  padding: "12px 18px",
-                  borderBottom: "1px solid var(--sp-color-border)",
-                  fontSize: "1rem",
-                  fontWeight: 800,
-                }}
-              >
-                Key
-              </th>
-              <th
-                style={{
-                  textAlign: "left",
-                  padding: "12px 18px",
-                  borderBottom: "1px solid var(--sp-color-border)",
-                  boxShadow:
-                    "-10px 0 16px -16px color-mix(in oklab, var(--sp-color-text) 54%, transparent)",
-                  fontSize: "1rem",
-                  fontWeight: 800,
-                }}
-              >
-                Value
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {overrideEntries.map(([key, value], index) => (
-              <tr key={key}>
-                <td
-                  style={{
-                    width: 80,
-                    padding: "18px",
-                    borderBottom: "1px solid var(--sp-color-border)",
-                    color: "var(--sp-color-text)",
-                    fontWeight: 500,
-                  }}
-                >
-                  {index + 1}
-                </td>
-                <td
-                  style={{
-                    padding: "18px",
-                    borderBottom: "1px solid var(--sp-color-border)",
-                    fontWeight: 400,
-                  }}
-                >
-                  {key}
-                </td>
-                <td
-                  style={{
-                    padding: "18px",
-                    borderBottom: "1px solid var(--sp-color-border)",
-                    boxShadow:
-                      "-10px 0 16px -16px color-mix(in oklab, var(--sp-color-text) 54%, transparent)",
-                    fontWeight: 400,
-                    wordBreak: "break-word",
-                  }}
-                >
-                  {jsonCellValue(value)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          <ReadOnlyConditionRows entries={conditionEntries} />
+        </section>
+      )}
+
+      <OverrideValuesTable entries={overrideEntries} />
       <Modal
         open={showChangeInfo}
         onClose={() => setShowChangeInfo(false)}
         title="Change Information"
+        width="min(900px, calc(100vw - 32px))"
+        maxWidth="900px"
+        maxHeight="min(86vh, 860px)"
+        footer={
+          <button
+            type="button"
+            className="sp-button sp-button-secondary"
+            style={{
+              ...buttonSecondary,
+              minHeight: 42,
+              padding: "0 18px",
+              borderRadius: "var(--sp-control-radius)",
+              fontWeight: 750,
+            }}
+            onClick={() => setShowChangeInfo(false)}
+          >
+            Close
+          </button>
+        }
       >
         <div style={{ display: "grid", gap: "var(--sp-space-lg)" }}>
           <InfoBlock icon={<InfoIcon />} label="Description" value={row.description} />
@@ -434,6 +1075,7 @@ function OverrideCard({
             label="Reason for Change"
             value={row.change_reason}
           />
+          <ChangeMetadata row={row} />
         </div>
       </Modal>
     </article>
@@ -912,7 +1554,6 @@ function OverrideManagerContent({
             <OverrideCard
               key={row.id}
               row={row}
-              lockedDims={lockedDims}
               canEdit={canEdit}
               canEditRow={contextCanBeMutated(row.value)}
               onEdit={openEditModal}

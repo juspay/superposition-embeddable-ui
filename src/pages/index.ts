@@ -1,8 +1,10 @@
+export { AuditTrail } from "./AuditTrail";
+export type { AuditTrailProps } from "./AuditTrail";
 export { ConfigManager, ConfigManager as DefaultConfigManager } from "./ConfigManager";
 export type { ConfigManagerProps } from "./ConfigManager";
 export {
-  DimensionManager,
-  DimensionManager as DimensionsManager,
+    DimensionManager,
+    DimensionManager as DimensionsManager
 } from "./DimensionManager";
 export type { DimensionManagerProps } from "./DimensionManager";
 export { OverrideManager, OverrideManager as OverridesManager } from "./OverrideManager";

@@ -1,10 +1,16 @@
+import { spawnSync } from "node:child_process";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { spawnSync } from "node:child_process";
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const viteCli = resolve(rootDir, "node_modules", "vite", "bin", "vite.js");
-const features = ["admin", "config-manager", "override-manager", "dimension-manager"];
+const features = [
+  "admin",
+  "config-manager",
+  "override-manager",
+  "dimension-manager",
+  "audit-trail",
+];
 
 for (const feature of features) {
   const result = spawnSync(

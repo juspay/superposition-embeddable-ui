@@ -1,3 +1,10 @@
+import {
+  Theme as BlendTheme,
+  ThemeProvider as BlendThemeProvider,
+  FOUNDATION_THEME,
+  type ComponentTokenType as BlendComponentTokenType,
+  type ThemeType as BlendThemeType,
+} from "@juspay/blend-design-system";
 import React, {
   createContext,
   useCallback,
@@ -6,13 +13,7 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import {
-  FOUNDATION_THEME,
-  Theme as BlendTheme,
-  ThemeProvider as BlendThemeProvider,
-  type ComponentTokenType as BlendComponentTokenType,
-  type ThemeType as BlendThemeType,
-} from "@juspay/blend-design-system";
+import { auditLogsApi } from "../api/audit-logs";
 import { SuperpositionClient } from "../api/client";
 import { defaultConfigsApi } from "../api/default-configs";
 import { dimensionsApi } from "../api/dimensions";
@@ -44,6 +45,7 @@ export interface SuperpositionScopeState {
 export interface SuperpositionContextValue {
   config: SuperpositionEmbeddableConfig;
   client: SuperpositionClient;
+  auditLogs: ReturnType<typeof auditLogsApi>;
   dimensions: ReturnType<typeof dimensionsApi>;
   defaultConfigs: ReturnType<typeof defaultConfigsApi>;
   overrides: ReturnType<typeof overridesApi>;
@@ -52,7 +54,7 @@ export interface SuperpositionContextValue {
 }
 
 const SuperpositionContext = createContext<SuperpositionContextValue | null>(null);
-const ignoreBoundaryContext = () => {};
+const ignoreBoundaryContext = () => { };
 
 function getSystemThemeMode(): Exclude<SuperpositionThemeMode, "system"> {
   if (
@@ -192,6 +194,15 @@ function buildThemeVars(
   const pageTitle = tokens?.pageTitle;
   const jsonValue = tokens?.jsonValue;
   const tooltip = tokens?.tooltip;
+  const resolvedFontFamily =
+    typography?.fontFamily ??
+    'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif';
+  const resolvedHeadingFontFamily = resolvedFontFamily;
+  const resolvedFontSize = cssLength(
+    typography?.fontSize ?? foundationFont.fontSize[14],
+  );
+  const typographyLineHeight = (typography as { lineHeight?: string | number } | undefined)
+    ?.lineHeight;
 
   return {
     "--sp-color-bg":
@@ -436,11 +447,11 @@ function buildThemeVars(
     "--sp-feedback-info-border":
       "color-mix(in oklab, var(--sp-color-primary) 24%, var(--sp-color-border))",
     "--sp-feedback-success-bg":
-      "color-mix(in oklab, var(--sp-color-success) 14%, var(--sp-color-panel))",
+      isDark ? foundationColors.green[950] : foundationColors.green[50],
     "--sp-feedback-success-text":
-      "color-mix(in oklab, var(--sp-color-success) 72%, var(--sp-color-text))",
+      isDark ? foundationColors.green[300] : foundationColors.green[700],
     "--sp-feedback-success-border":
-      "color-mix(in oklab, var(--sp-color-success) 32%, var(--sp-color-border))",
+      isDark ? foundationColors.green[800] : foundationColors.green[200],
     "--sp-feedback-warning-bg":
       "color-mix(in oklab, var(--sp-color-warning) 18%, var(--sp-color-panel))",
     "--sp-feedback-warning-text":
@@ -458,11 +469,12 @@ function buildThemeVars(
     "--sp-feedback-neutral-text": "var(--sp-color-text)",
     "--sp-feedback-neutral-border":
       "color-mix(in oklab, var(--sp-color-muted) 22%, var(--sp-color-border))",
-    fontFamily:
-      typography?.fontFamily ??
-      foundationFont.family.body ??
-      'InterDisplay, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif',
-    fontSize: cssLength(typography?.fontSize ?? foundationFont.fontSize[14]),
+    "--sp-font-family": resolvedFontFamily,
+    "--sp-heading-font-family": resolvedHeadingFontFamily,
+    "--sp-font-size-base": resolvedFontSize,
+    "--sp-line-height-body": typographyLineHeight ?? "1.5",
+    fontFamily: "var(--sp-font-family)",
+    fontSize: "var(--sp-font-size-base)",
     color: "var(--sp-color-text)",
   } as React.CSSProperties;
 }
@@ -560,6 +572,7 @@ export function SuperpositionUIProvider({
     return {
       config,
       client,
+      auditLogs: auditLogsApi(client),
       dimensions: dimensionsApi(client),
       defaultConfigs: defaultConfigsApi(client),
       overrides: overridesApi(client),

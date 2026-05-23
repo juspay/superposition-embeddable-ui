@@ -7,6 +7,7 @@ import {
   unregisterSuperpositionHostAdapters,
   type FeatureName,
 } from "./browser-runtime";
+import { AuditTrail } from "./pages/AuditTrail";
 import { ConfigManager } from "./pages/ConfigManager";
 import { DimensionManager } from "./pages/DimensionManager";
 import { OverrideManager } from "./pages/OverrideManager";
@@ -20,6 +21,7 @@ const featureComponents = {
   "config-manager": ConfigManager,
   "override-manager": OverrideManager,
   "dimension-manager": DimensionManager,
+  "audit-trail": AuditTrail,
 } satisfies Record<FeatureName, ComponentType<any>>;
 
 const featureTagSuffixes: Record<FeatureName, string> = {
@@ -27,6 +29,7 @@ const featureTagSuffixes: Record<FeatureName, string> = {
   "config-manager": "config-manager",
   "override-manager": "override-manager",
   "dimension-manager": "dimension-manager",
+  "audit-trail": "audit-trail",
 };
 
 export const customElementTagNames: Record<FeatureName, string> = {
@@ -37,6 +40,7 @@ export const customElementTagNames: Record<FeatureName, string> = {
     "superposition",
     featureTagSuffixes["dimension-manager"],
   ),
+  "audit-trail": createTagName("superposition", featureTagSuffixes["audit-trail"]),
 };
 
 export function mountSuperpositionFeature(
@@ -75,5 +79,5 @@ export function defineCustomElements(prefix = "superposition") {
 
 export {
   registerSuperpositionHostAdapters,
-  unregisterSuperpositionHostAdapters,
+  unregisterSuperpositionHostAdapters
 };

@@ -16,8 +16,17 @@
 }
 
 .sp-ui {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+  font-family: var(--sp-font-family), -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+  font-size: var(--sp-font-size-base);
+  line-height: var(--sp-line-height-body);
   color: var(--sp-color-text);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.sp-ui :where(h1, h2, h3, h4, h5, h6) {
+  font-family: var(--sp-heading-font-family), var(--sp-font-family), -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+  letter-spacing: 0;
 }
 
 .sp-ui :where(button, input, textarea, select) {
@@ -39,13 +48,11 @@
 .sp-ui .sp-create-override-button {
   min-height: 42px !important;
   padding: 0 18px !important;
-  border: 1.5px solid
-    color-mix(in oklab, var(--sp-color-primary) 76%, var(--sp-color-border)) !important;
+  border: 1.5px solid color-mix(in oklab, var(--sp-color-primary) 76%, var(--sp-color-border)) !important;
   border-radius: var(--sp-button-radius) !important;
   background: var(--sp-button-primary-bg) !important;
   color: var(--sp-button-primary-text) !important;
-  box-shadow: var(--sp-button-primary-shadow), 0 1px 2px
-    color-mix(in oklab, var(--sp-color-text) 14%, transparent) !important;
+  box-shadow: var(--sp-button-primary-shadow), 0 1px 2px color-mix(in oklab, var(--sp-color-text) 14%, transparent) !important;
   font-size: var(--sp-button-font-size) !important;
   font-weight: 700 !important;
   line-height: 1;
@@ -65,6 +72,44 @@
 .sp-ui .sp-button-secondary:hover:not(:disabled) {
   border-color: color-mix(in oklab, var(--sp-color-primary) 30%, var(--sp-color-border));
   background: var(--sp-color-surface-muted);
+}
+
+.sp-ui .sp-audit-row {
+  transition: background 140ms ease;
+}
+
+.sp-ui .sp-audit-row:hover {
+  background: color-mix(in oklab, var(--sp-color-primary) 3%, var(--sp-color-panel));
+}
+
+.sp-ui .sp-audit-filter-select,
+.sp-ui .sp-audit-date-range {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.sp-ui .sp-audit-filter-select button,
+.sp-ui .sp-audit-date-range button {
+  min-height: 38px !important;
+  font-family: var(--sp-font-family), -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 650 !important;
+}
+
+.sp-ui .sp-audit-date-range {
+  gap: 8px;
+}
+
+.sp-ui .sp-audit-date-range__clear {
+  min-height: 32px !important;
+  padding: 0 10px !important;
+  border: 1px solid var(--sp-color-border);
+  border-radius: var(--sp-inline-radius);
+  background: var(--sp-color-panel);
+  color: var(--sp-color-muted);
+  cursor: pointer;
+  box-shadow: none;
 }
 
 .sp-ui :where(button:disabled) {
@@ -88,7 +133,7 @@
     opacity 180ms ease;
 }
 
-.sp-ui .sp-search-field > * {
+.sp-ui .sp-search-field>* {
   width: 100%;
 }
 
@@ -135,16 +180,12 @@
   font-family: "SFMono-Regular", "SF Mono", ui-monospace, Menlo, monospace;
 }
 
-.sp-ui
-  :where(
-    button:focus-visible,
-    input:focus-visible,
-    textarea:focus-visible,
-    select:focus-visible,
-    a:focus-visible
-  ) {
-  outline: 2px solid
-    color-mix(in oklab, var(--sp-color-primary) 60%, var(--sp-color-panel));
+.sp-ui :where(button:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible,
+  a:focus-visible) {
+  outline: 2px solid color-mix(in oklab, var(--sp-color-primary) 60%, var(--sp-color-panel));
   outline-offset: 2px;
 }
 
@@ -153,8 +194,7 @@
 }
 
 .sp-ui :where([data-sp-scroll]) {
-  scrollbar-color: color-mix(in oklab, var(--sp-color-primary) 40%, transparent)
-    transparent;
+  scrollbar-color: color-mix(in oklab, var(--sp-color-primary) 40%, transparent) transparent;
 }
 
 .sp-ui .sp-tooltip {
@@ -207,7 +247,7 @@
   transform: translate(-50%, 0);
 }
 
-.sp-ui .sp-field-card + .sp-field-card {
+.sp-ui .sp-field-card+.sp-field-card {
   margin-top: 2px;
 }
 
@@ -412,6 +452,20 @@
 
 .sp-ui .sp-dropdown-option:hover {
   background: var(--sp-dropdown-option-hover-bg) !important;
+}
+
+.sp-ui .sp-config-row {
+  transition: background 140ms ease;
+}
+
+.sp-ui .sp-config-row:hover {
+  background: color-mix(in oklab, var(--sp-color-primary) 3%, var(--sp-color-panel));
+}
+
+.sp-ui .sp-override-card:hover {
+  border-color: color-mix(in oklab, var(--sp-color-primary) 14%, var(--sp-color-border));
+  box-shadow: 0 10px 24px color-mix(in oklab, var(--sp-color-text) 8%, transparent);
+  transform: translateY(-1px);
 }
 
 .sp-ui :where(input, textarea, select) {

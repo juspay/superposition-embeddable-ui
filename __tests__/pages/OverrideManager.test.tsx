@@ -256,7 +256,8 @@ describe("OverrideManager", () => {
       expect(screen.getByRole("heading", { name: "Overrides" })).toBeDefined();
       expect(screen.getByText("US App")).toBeDefined();
     });
-    expect(screen.getAllByText("And")).toHaveLength(1);
+    expect(screen.queryByText("Match ALL")).toBeNull();
+    expect(screen.getAllByText("AND").length).toBeGreaterThan(0);
   });
 
   it("paginates override cards when the API returns the full dataset", async () => {
@@ -483,6 +484,7 @@ describe("OverrideManager", () => {
     expect(screen.getByText("US override")).toBeDefined();
     expect(screen.getByText("Reason for Change")).toBeDefined();
     expect(screen.getByText("init")).toBeDefined();
+    expect(screen.getByText(/by admin/)).toBeDefined();
   });
 
   it("does not render delete actions in the override list", async () => {
@@ -496,6 +498,28 @@ describe("OverrideManager", () => {
 
     expect(await screen.findByText("US App")).toBeDefined();
     expect(screen.queryAllByRole("button", { name: /Delete override/ }).length).toBe(0);
+  });
+
+  it("shows expanded override details without edit or delete actions", async () => {
+    render(
+      <SuperpositionUIProvider config={testConfig}>
+        <AlertProvider>
+          <OverrideManager />
+        </AlertProvider>
+      </SuperpositionUIProvider>,
+    );
+
+    expect(await screen.findByText("US App")).toBeDefined();
+    expect(screen.getByRole("button", { name: "Edit override ctx-1" })).toBeDefined();
+
+    fireEvent.click(screen.getByRole("button", { name: "Expand conditions for ctx-1" }));
+
+    expect(screen.getByRole("button", { name: "Collapse conditions for ctx-1" })).toBeDefined();
+    expect(screen.queryByRole("button", { name: "Edit override ctx-1" })).toBeNull();
+    expect(screen.queryAllByRole("button", { name: /Delete override/ }).length).toBe(0);
+    expect(screen.getByText("Field")).toBeDefined();
+    expect(screen.getByText("Operator")).toBeDefined();
+    expect(screen.getAllByText("Value").length).toBeGreaterThan(0);
   });
 
   it("filters overrides by scoped context", async () => {
