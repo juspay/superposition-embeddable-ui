@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SuperpositionAdmin } from "../../src/pages/SuperpositionAdmin";
 import { AlertProvider } from "../../src/providers/AlertProvider";
 import { SuperpositionUIProvider } from "../../src/providers/SuperpositionUIProvider";
+import type { SuperpositionEmbeddableConfig } from "../../src/types";
 
 describe("SuperpositionAdmin", () => {
   const mockFetch = vi.fn();
@@ -106,5 +107,52 @@ describe("SuperpositionAdmin", () => {
     });
 
     expect(screen.queryByText("Filter")).toBeNull();
+  });
+
+  it("reads config and dimension editability from embeddable config", async () => {
+    const config: SuperpositionEmbeddableConfig = {
+      apiBaseUrl: "/api",
+      orgId: "org",
+      workspace: "ws",
+      features: ["config", "dimensions"],
+      capabilities: {
+        config: { create: true },
+        dimensions: { create: true },
+      },
+      ui: {
+        featureControls: {
+          config: { editable: true },
+          dimensions: { editable: true },
+        },
+      },
+    };
+
+    const { unmount } = render(
+      <SuperpositionUIProvider config={config}>
+        <AlertProvider>
+          <SuperpositionAdmin />
+        </AlertProvider>
+      </SuperpositionUIProvider>,
+    );
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalled();
+    });
+
+    expect(screen.getByRole("button", { name: "Create config" })).toBeDefined();
+
+    unmount();
+
+    render(
+      <SuperpositionUIProvider config={config}>
+        <AlertProvider>
+          <SuperpositionAdmin defaultTab="dimensions" />
+        </AlertProvider>
+      </SuperpositionUIProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Create dimension" })).toBeDefined();
+    });
   });
 });

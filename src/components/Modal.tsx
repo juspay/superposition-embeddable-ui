@@ -1,3 +1,4 @@
+import "../blend-react-compat";
 import React from "react";
 import { Modal as BlendModal } from "@juspay/blend-design-system";
 import {
@@ -19,6 +20,7 @@ export interface ModalProps {
 
 type BlendModalWithContainerEvents = React.ComponentType<
   React.ComponentProps<typeof BlendModal> & {
+    "data-sp-embed-modal"?: string;
     onClick?: React.MouseEventHandler<HTMLDivElement>;
   }
 >;
@@ -64,6 +66,7 @@ export function Modal({
       isCustom
       closeOnBackdropClick
       useDrawerOnMobile
+      data-sp-embed-modal="true"
       minWidth="var(--sp-modal-min-width)"
       maxWidth={maxWidth ?? "var(--sp-modal-max-width)"}
       maxHeight={maxHeight ?? "var(--sp-modal-max-height)"}
@@ -83,10 +86,14 @@ export function Modal({
           maxHeight: maxHeight ?? "var(--sp-modal-max-height)",
           display: "flex",
           flexDirection: "column",
+          minHeight: 0,
+          overflow: "hidden",
           background: "var(--sp-color-panel)",
         }}
       >
-        <div style={{ padding: 24, overflowY: "auto", flex: 1 }}>{children}</div>
+        <div style={{ padding: 24, overflowY: "auto", flex: 1, minHeight: 0 }}>
+          {children}
+        </div>
         {footer && (
           <div
             style={{

@@ -1,3 +1,11 @@
+import "../blend-react-compat";
+import {
+  TagColor,
+  TagShape,
+  TagSize,
+  TagVariant,
+  Tag,
+} from "@juspay/blend-design-system";
 import type { Condition } from "../types";
 
 export interface ConditionBadgesProps {
@@ -57,22 +65,20 @@ export function ConditionBadges({
     <div className="sp-condition-badges">
       {entries.map(([key, value]) => {
         const isLocked = lockedKeys.includes(key);
+        const formattedValue = formatConditionValue(value);
+
         return (
-          <span
+          <Tag
             key={key}
-            className={
-              isLocked
-                ? "sp-condition-badge sp-condition-badge-locked"
-                : "sp-condition-badge"
-            }
-          >
-            <span className="sp-condition-badge__key">{key}</span>
-            <span className="sp-condition-badge__operator">==</span>
-            <span className="sp-condition-badge__value">
-              {formatConditionValue(value)}
-            </span>
-            {isLocked && <LockIcon />}
-          </span>
+            text={`${key} = ${formattedValue}`}
+            color={isLocked ? TagColor.WARNING : TagColor.PRIMARY}
+            variant={TagVariant.SUBTLE}
+            size={TagSize.SM}
+            shape={TagShape.SQUARICAL}
+            rightSlot={isLocked ? <LockIcon /> : undefined}
+            maxWidth="100%"
+            title={`${key} = ${formattedValue}`}
+          />
         );
       })}
     </div>

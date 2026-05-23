@@ -1,12 +1,17 @@
 import type {
-    ComponentTokenType as BlendComponentTokenType,
-    ThemeType as BlendThemeType,
+  ComponentTokenType as BlendComponentTokenType,
+  ThemeType as BlendThemeType,
 } from "@juspay/blend-design-system";
 import type React from "react";
 import type { JsonValue } from "./api";
 export * from "./api";
 
-export const SUPERPOSITION_FEATURES = ["config", "overrides", "dimensions", "audit"] as const;
+export const SUPERPOSITION_FEATURES = [
+  "config",
+  "overrides",
+  "dimensions",
+  "audit",
+] as const;
 
 export type SuperpositionFeature = (typeof SUPERPOSITION_FEATURES)[number];
 
@@ -21,6 +26,7 @@ export type RouteMode = "internal" | "external";
 type InternalTransportMode = "same-origin" | "cross-origin" | "host-proxy";
 export type AuthMode = "cookie" | "bearer" | "custom";
 export type SuperpositionThemeMode = "light" | "dark" | "system";
+export type SuperpositionSearchAlign = "left" | "center" | "right";
 
 export interface SuperpositionStyleConfig {
   padding?: string;
@@ -41,6 +47,7 @@ export interface SuperpositionStyleConfig {
 export interface SuperpositionThemeColors {
   bg?: string;
   panel?: string;
+  surfaceMuted?: string;
   text?: string;
   muted?: string;
   border?: string;
@@ -104,6 +111,7 @@ export interface SuperpositionIconThemeConfig {
 }
 
 export interface SuperpositionSearchThemeConfig extends SuperpositionStyleConfig {
+  align?: SuperpositionSearchAlign;
   placeholderColor?: string;
   placeholderOpacity?: string;
   hoverBgColor?: string;
@@ -138,8 +146,17 @@ export interface SuperpositionTableSerialNumberConfig {
   align?: "left" | "center" | "right";
 }
 
+export interface SuperpositionTablePageConfig {
+  searchAlign?: SuperpositionSearchAlign;
+}
+
 export interface SuperpositionTableConfig {
   serialNumber?: boolean | SuperpositionTableSerialNumberConfig;
+  searchAlign?: SuperpositionSearchAlign;
+  defaultConfig?: SuperpositionTablePageConfig;
+  overrides?: SuperpositionTablePageConfig;
+  dimensions?: SuperpositionTablePageConfig;
+  audit?: SuperpositionTablePageConfig;
 }
 
 export interface SuperpositionToastThemeConfig extends SuperpositionStyleConfig {
@@ -195,6 +212,7 @@ export interface SuperpositionThemeTokens {
   shadow?: SuperpositionShadowConfig;
   typography?: SuperpositionTypographyConfig;
   button?: SuperpositionButtonThemeConfig;
+  card?: SuperpositionStyleConfig;
   table?: SuperpositionTableThemeConfig;
   form?: SuperpositionFormThemeConfig;
   dropdown?: SuperpositionDropdownThemeConfig;
@@ -230,6 +248,16 @@ export interface ConfirmInput {
   variant?: "default" | "destructive";
 }
 
+export interface SuperpositionFeatureUiControlConfig {
+  editable?: boolean;
+  /** Enable row-click navigation to single-item detail pages. Defaults to true. */
+  detailPage?: boolean;
+}
+
+export type SuperpositionFeatureUiControls = Partial<
+  Record<SuperpositionFeature, SuperpositionFeatureUiControlConfig>
+>;
+
 export interface SuperpositionUiAdapters {
   notify?: (input: {
     tone: "info" | "success" | "warning" | "error";
@@ -248,15 +276,13 @@ export interface SuperpositionUiAdapters {
   modalZIndex?: number;
   alertZIndex?: number;
   showBoundaryFilter?: boolean;
+  featureControls?: SuperpositionFeatureUiControls;
 }
 
 export interface SuperpositionFeatureCapabilities {
   create?: boolean;
   update?: boolean;
   delete?: boolean;
-  ramp?: boolean;
-  execute?: boolean;
-  editContext?: boolean;
 }
 
 export type SuperpositionCapabilitiesConfig = Partial<
@@ -269,6 +295,14 @@ export interface SuperpositionLayoutConfig {
   modalMinWidth?: string;
   modalMaxWidth?: string;
   modalMaxHeight?: string;
+  overrideEditorModalWidth?: string;
+  overrideEditorModalMaxWidth?: string;
+  overrideEditorModalMaxHeight?: string;
+  overrideDetailsModalWidth?: string;
+  overrideDetailsModalMaxWidth?: string;
+  overrideDetailsModalMaxHeight?: string;
+  overrideListGap?: string;
+  overrideCardPadding?: string;
   confirmWidth?: string;
   alertMinWidth?: string;
   tableMinWidth?: string;

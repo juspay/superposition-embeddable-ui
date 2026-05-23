@@ -53,11 +53,12 @@ The host app only needs to provide a `config` object.
 - `scope.locked` (optional): keeps the UI inside that bounded slice.
 - `strict` (optional): prevents extra boundary context and uses exact context matching for override lists.
 - `features` (optional): which screens are allowed to render. `[]` renders no feature UI.
-- `capabilities` (optional): per-feature action switches such as create, delete, ramp, and execute.
+- `capabilities` (optional): per-feature action switches for create, update, and delete.
 - `filters.defaultConfigPrefix` (optional): restricts default config keys and override values.
 - `theme` (optional): color, typography, spacing, and radius overrides.
 - `layout` (optional): host-controlled shell, modal, and alert sizing.
 - `ui` (optional): host-owned notifications, confirmation, layering, and boundary-filter controls.
+- `ui.featureControls` (optional): host-owned UI toggles for edit controls and row-click detail pages.
 - `messages` (optional): host overrides for visible SDK copy.
 
 The embeddable UI currently uses its own fetch-based REST client. It does not call a host-installed Superposition SDK directly. If your host app already talks to Superposition through its own backend or SDK, expose or proxy those REST endpoints from the host and point `apiBaseUrl` at that proxy.
@@ -179,6 +180,10 @@ The embeddable UI currently uses its own fetch-based REST client. It does not ca
   },
   "ui": {
     "showBoundaryFilter": false,
+    "featureControls": {
+      "config": { "editable": true, "detailPage": true },
+      "dimensions": { "editable": true, "detailPage": true }
+    },
     "modalZIndex": 1200,
     "alertZIndex": 1200
   },
@@ -211,7 +216,7 @@ strict: true,
 ```
 
 If you leave `scope.context` out, the overrides UI is view-only unless
-`capabilities.overrides.editContext` is enabled. The backend is responsible
+`capabilities.overrides.update` is enabled. The backend is responsible
 for authorizing create and edit actions — if the token lacks permission,
 the backend will reject the request.
 
@@ -225,6 +230,9 @@ the List Contexts API as `dimension[...]` query params; strict mode sends
 
 `readOnly` is still the fastest way to disable all mutating actions. Use
 `capabilities` when the host needs more precise control.
+
+When a feature appears in `capabilities`, omitted actions default to `false`.
+That makes `capabilities` an explicit allowlist rather than a partial override.
 
 For overrides, create and update actions are controlled by `capabilities`.
 The backend enforces authorization — if the request lacks valid credentials,
@@ -251,8 +259,15 @@ ui: {
     hostModal.render({ title, children, footer, onClose }),
   portalContainer: "#host-overlays",
   showBoundaryFilter: false,
+  featureControls: {
+    config: { editable: true, detailPage: true },
+    dimensions: { editable: true, detailPage: true },
+  },
 },
 ```
+
+`featureControls.<feature>.detailPage` defaults to `true`; set it to `false` when
+the host wants a list-only config or dimensions embed.
 
 If `notify` is provided, the SDK does not render its own toast stack. If
 `confirm` is provided, destructive actions use the host dialog instead of the

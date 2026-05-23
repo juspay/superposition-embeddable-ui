@@ -1,3 +1,5 @@
+import "./blend-react-compat";
+
 import type { ComponentType } from "react";
 import React from "react";
 import {
@@ -22,7 +24,9 @@ function lazyFeature(
 const featureComponents: Record<FeatureName, ReturnType<typeof lazyFeature>> = {
   admin: React.lazy(async () => {
     const mod = await import("./pages/SuperpositionAdmin");
-    return { default: mod.SuperpositionAdmin as React.ComponentType<FeatureComponentProps> };
+    return {
+      default: mod.SuperpositionAdmin as React.ComponentType<FeatureComponentProps>,
+    };
   }),
   "config-manager": React.lazy(async () => {
     const mod = await import("./pages/ConfigManager");
@@ -34,7 +38,9 @@ const featureComponents: Record<FeatureName, ReturnType<typeof lazyFeature>> = {
   }),
   "dimension-manager": React.lazy(async () => {
     const mod = await import("./pages/DimensionManager");
-    return { default: mod.DimensionManager as React.ComponentType<FeatureComponentProps> };
+    return {
+      default: mod.DimensionManager as React.ComponentType<FeatureComponentProps>,
+    };
   }),
   "audit-trail": React.lazy(async () => {
     const mod = await import("./pages/AuditTrail");
@@ -53,7 +59,10 @@ const featureTagSuffixes: Record<FeatureName, string> = {
 export const customElementTagNames: Record<FeatureName, string> = {
   admin: createTagName("superposition", featureTagSuffixes.admin),
   "config-manager": createTagName("superposition", featureTagSuffixes["config-manager"]),
-  "override-manager": createTagName("superposition", featureTagSuffixes["override-manager"]),
+  "override-manager": createTagName(
+    "superposition",
+    featureTagSuffixes["override-manager"],
+  ),
   "dimension-manager": createTagName(
     "superposition",
     featureTagSuffixes["dimension-manager"],

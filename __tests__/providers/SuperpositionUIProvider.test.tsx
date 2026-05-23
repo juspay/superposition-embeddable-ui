@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import type { FormEvent } from "react";
 import { describe, expect, it, vi } from "vitest";
 import {
   SuperpositionUIProvider,
@@ -89,6 +90,28 @@ describe("SuperpositionUIProvider", () => {
 
     expect(screen.getByTestId("host").textContent).toBe("/api");
     expect(screen.getByTestId("org").textContent).toBe("my-org");
+  });
+
+  it("keeps internal controls from submitting a host form", () => {
+    const onSubmit = vi.fn((event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+    });
+    const onClick = vi.fn();
+
+    render(
+      <form onSubmit={onSubmit}>
+        <SuperpositionUIProvider
+          config={{ apiBaseUrl: "/api", orgId: "my-org", workspace: "prod" }}
+        >
+          <button onClick={onClick}>Internal action</button>
+        </SuperpositionUIProvider>
+      </form>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Internal action" }));
+
+    expect(onClick).toHaveBeenCalledTimes(1);
+    expect(onSubmit).not.toHaveBeenCalled();
   });
 
   it("provides theme mode from config", () => {

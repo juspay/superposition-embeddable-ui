@@ -1,5 +1,6 @@
-import React, { cloneElement, isValidElement, useId } from "react";
+import "../blend-react-compat";
 import { TextArea, TextInput, TextInputSize } from "@juspay/blend-design-system";
+import React, { cloneElement, isValidElement, useId } from "react";
 
 export interface FormFieldProps {
   label: string;
@@ -153,6 +154,18 @@ export const buttonPrimary: React.CSSProperties = {
     "box-shadow 180ms ease, background 180ms ease, border-color 180ms ease, transform 120ms ease",
 };
 
+export const createActionButtonStyle: React.CSSProperties = {
+  ...buttonPrimary,
+  minHeight: 42,
+  padding: "0 18px",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 8,
+  whiteSpace: "nowrap",
+  borderColor: "color-mix(in oklab, var(--sp-color-primary) 76%, var(--sp-color-border))",
+};
+
 export const buttonSecondary: React.CSSProperties = {
   padding: "var(--sp-button-padding)",
   background: "var(--sp-button-secondary-bg)",
@@ -164,6 +177,19 @@ export const buttonSecondary: React.CSSProperties = {
   fontWeight: "var(--sp-button-font-weight)",
   transition:
     "box-shadow 180ms ease, background 180ms ease, border-color 180ms ease, transform 120ms ease",
+};
+
+export const exportActionButtonStyle: React.CSSProperties = {
+  ...buttonSecondary,
+  minHeight: 38,
+  padding: "0 14px",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 10,
+  borderRadius: "var(--sp-control-radius)",
+  fontWeight: 800,
+  whiteSpace: "nowrap",
 };
 
 export const buttonDanger: React.CSSProperties = {

@@ -1,19 +1,7 @@
 import react from "@vitejs/plugin-react";
 import { resolve } from "path";
 import { defineConfig } from "vite";
-
-const externalPackages = [
-  "react",
-  "react-dom",
-  "react-dom/client",
-  "react/jsx-runtime",
-];
-
-function isExternal(id: string) {
-  return (
-    externalPackages.includes(id) || id.startsWith("@juspay/blend-design-system")
-  );
-}
+import { isLibraryExternal } from "./vite.external";
 
 export default defineConfig({
   plugins: [react()],
@@ -26,7 +14,7 @@ export default defineConfig({
       fileName: (format) => `browser.${format === "es" ? "js" : "cjs"}`,
     },
     rollupOptions: {
-      external: isExternal,
+      external: isLibraryExternal,
       output: {
         globals: {
           react: "React",

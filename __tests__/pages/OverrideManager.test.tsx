@@ -1,4 +1,5 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { OverrideManager } from "../../src/pages/OverrideManager";
 import { AlertProvider } from "../../src/providers/AlertProvider";
@@ -8,6 +9,9 @@ const testConfig = {
   apiBaseUrl: "https://test.com",
   orgId: "org",
   workspace: "ws",
+  capabilities: {
+    overrides: { create: true, update: true },
+  },
 };
 
 const mockOverrides = {
@@ -183,11 +187,19 @@ function buildResponse(body: unknown) {
 }
 
 async function chooseFromDropdown(label: string, value: string) {
+  const user = userEvent.setup();
   const trigger = screen.getByRole("button", { name: label });
-  fireEvent.click(trigger);
-  fireEvent.keyDown(trigger, { key: "Enter", code: "Enter" });
-  fireEvent.keyUp(trigger, { key: "Enter", code: "Enter" });
-  fireEvent.click(await screen.findByRole("option", { name: value }));
+  await user.click(trigger);
+  const item = await screen.findByRole("menuitem", { name: value });
+  fireEvent.click(item);
+}
+
+async function chooseFromDropdownField(placeholder: string, value: string) {
+  const user = userEvent.setup();
+  const field = screen.getByPlaceholderText(placeholder);
+  await user.click(field);
+  const item = await screen.findByRole("menuitem", { name: value });
+  fireEvent.click(item);
 }
 
 describe("OverrideManager", () => {
@@ -254,10 +266,51 @@ describe("OverrideManager", () => {
 
     await waitFor(() => {
       expect(screen.getByRole("heading", { name: "Overrides" })).toBeDefined();
-      expect(screen.getByText("US App")).toBeDefined();
+      expect(
+        screen.getByText(
+          "Review scoped overrides, then expand a card to inspect its conditions and values.",
+        ),
+      ).toBeDefined();
     });
-    expect(screen.queryByText("Match ALL")).toBeNull();
-    expect(screen.getAllByText("AND").length).toBeGreaterThan(0);
+    expect(screen.queryByText("4 overrides")).toBeNull();
+    expect(screen.getAllByText("Condition").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("region:us-east-1").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("+1 more condition").length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Dimension:/)).toBeNull();
+    expect(screen.queryByText(/Value:/)).toBeNull();
+    expect(screen.queryByText("US App")).toBeNull();
+  });
+
+  it("searches override cards across contexts, values, and metadata", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <SuperpositionUIProvider config={testConfig}>
+        <AlertProvider>
+          <OverrideManager />
+        </AlertProvider>
+      </SuperpositionUIProvider>,
+    );
+
+    expect(
+      await screen.findByRole("button", { name: "Edit override ctx-1" }),
+    ).toBeDefined();
+
+    await user.type(screen.getByPlaceholderText("Search overrides"), "EU");
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Edit override ctx-2" })).toBeDefined();
+      expect(screen.queryByRole("button", { name: "Edit override ctx-1" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "Edit override ctx-3" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "Edit override ctx-4" })).toBeNull();
+    });
+
+    expect(mockFetch.mock.calls.some(([url]) => String(url).includes("all=true"))).toBe(
+      true,
+    );
+    expect(mockFetch.mock.calls.some(([url]) => String(url).includes("plaintext="))).toBe(
+      false,
+    );
   });
 
   it("paginates override cards when the API returns the full dataset", async () => {
@@ -270,24 +323,174 @@ describe("OverrideManager", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("US App")).toBeDefined();
-      expect(screen.getByText("EU App")).toBeDefined();
+      expect(screen.getByRole("button", { name: "Edit override ctx-1" })).toBeDefined();
+      expect(screen.getByRole("button", { name: "Edit override ctx-2" })).toBeDefined();
     });
 
-    expect(screen.getByText("Page 1 of 2")).toBeDefined();
-    expect(screen.queryByText("Region App")).toBeNull();
-    expect(screen.queryByText("Env App")).toBeNull();
+    expect(screen.getByText("Showing 1 to 2 of 4 records")).toBeDefined();
+    expect(screen.queryByRole("button", { name: "Edit override ctx-3" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Edit override ctx-4" })).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    fireEvent.click(screen.getByRole("button", { name: "Next page" }));
 
     await waitFor(() => {
-      expect(screen.getByText("Page 2 of 2")).toBeDefined();
-      expect(screen.getByText("Region App")).toBeDefined();
-      expect(screen.getByText("Env App")).toBeDefined();
+      expect(screen.getByText("Showing 3 to 4 of 4 records")).toBeDefined();
+      expect(screen.getByRole("button", { name: "Edit override ctx-3" })).toBeDefined();
+      expect(screen.getByRole("button", { name: "Edit override ctx-4" })).toBeDefined();
     });
 
-    expect(screen.queryByText("US App")).toBeNull();
-    expect(screen.queryByText("EU App")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Edit override ctx-1" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Edit override ctx-2" })).toBeNull();
+  });
+
+  it("shows pagination when the API returns paged overrides without a total item count", async () => {
+    mockFetch.mockImplementation((url: string) => {
+      if (url.includes("/dimension")) {
+        return Promise.resolve(buildResponse(mockDimensions));
+      }
+
+      if (url.includes("/default-config")) {
+        return Promise.resolve(buildResponse(mockDefaultConfigs));
+      }
+
+      if (url.includes("/context?") && url.includes("page=2")) {
+        return Promise.resolve(
+          buildResponse({
+            total_pages: 2,
+            data: [mockOverrides.data[2], mockOverrides.data[3]],
+          }),
+        );
+      }
+
+      return Promise.resolve(
+        buildResponse({
+          total_pages: 2,
+          data: [mockOverrides.data[0], mockOverrides.data[1]],
+        }),
+      );
+    });
+
+    render(
+      <SuperpositionUIProvider config={testConfig}>
+        <AlertProvider>
+          <OverrideManager pageSize={2} />
+        </AlertProvider>
+      </SuperpositionUIProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Edit override ctx-1" })).toBeDefined();
+      expect(screen.getByRole("button", { name: "Edit override ctx-2" })).toBeDefined();
+    });
+
+    expect(screen.getByRole("navigation", { name: "Pagination" })).toBeDefined();
+    expect(screen.queryByRole("button", { name: "Edit override ctx-3" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Next page" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Edit override ctx-3" })).toBeDefined();
+      expect(screen.getByRole("button", { name: "Edit override ctx-4" })).toBeDefined();
+    });
+
+    expect(screen.queryByRole("button", { name: "Edit override ctx-1" })).toBeNull();
+    expect(
+      mockFetch.mock.calls.some(([url]) =>
+        String(url).includes("/context?page=2&count=2"),
+      ),
+    ).toBe(true);
+  });
+
+  it("shows pagination when paged overrides omit total metadata", async () => {
+    mockFetch.mockImplementation((url: string) => {
+      if (url.includes("/dimension")) {
+        return Promise.resolve(buildResponse(mockDimensions));
+      }
+
+      if (url.includes("/default-config")) {
+        return Promise.resolve(buildResponse(mockDefaultConfigs));
+      }
+
+      if (url.includes("/context?") && url.includes("page=2")) {
+        return Promise.resolve(
+          buildResponse({
+            data: [mockOverrides.data[2]],
+          }),
+        );
+      }
+
+      return Promise.resolve(
+        buildResponse({
+          data: [mockOverrides.data[0], mockOverrides.data[1]],
+        }),
+      );
+    });
+
+    render(
+      <SuperpositionUIProvider config={testConfig}>
+        <AlertProvider>
+          <OverrideManager pageSize={2} />
+        </AlertProvider>
+      </SuperpositionUIProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Edit override ctx-1" })).toBeDefined();
+      expect(screen.getByRole("button", { name: "Edit override ctx-2" })).toBeDefined();
+    });
+
+    expect(screen.getByRole("navigation", { name: "Pagination" })).toBeDefined();
+    expect(screen.queryByText(/Showing 1 to 2/i)).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Next page" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Edit override ctx-3" })).toBeDefined();
+    });
+
+    expect(screen.queryByRole("button", { name: "Edit override ctx-1" })).toBeNull();
+    expect(
+      mockFetch.mock.calls.some(([url]) =>
+        String(url).includes("/context?page=2&count=2"),
+      ),
+    ).toBe(true);
+  });
+
+  it("hides pagination controls when a single override fits on the page", async () => {
+    mockFetch.mockImplementation((url: string) => {
+      if (url.includes("/dimension")) {
+        return Promise.resolve(buildResponse(mockDimensions));
+      }
+
+      if (url.includes("/default-config")) {
+        return Promise.resolve(buildResponse(mockDefaultConfigs));
+      }
+
+      return Promise.resolve(
+        buildResponse({
+          ...mockOverrides,
+          total_pages: 1,
+          total_items: 1,
+          data: [mockOverrides.data[0]],
+        }),
+      );
+    });
+
+    render(
+      <SuperpositionUIProvider config={testConfig}>
+        <AlertProvider>
+          <OverrideManager />
+        </AlertProvider>
+      </SuperpositionUIProvider>,
+    );
+
+    expect(
+      await screen.findByRole("button", { name: "Edit override ctx-1" }),
+    ).toBeDefined();
+    expect(screen.queryByText("1 override")).toBeNull();
+    expect(screen.queryByRole("navigation", { name: "Pagination" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Previous page" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Next page" })).toBeNull();
   });
 
   it("shows the shared empty state when no overrides exist", async () => {
@@ -327,7 +530,7 @@ describe("OverrideManager", () => {
       screen.getByText("This scoped context does not have any overrides yet."),
     ).toBeDefined();
     expect(screen.queryByText("0")).toBeNull();
-    expect(screen.queryByPlaceholderText("Search overrides")).toBeNull();
+    expect(screen.getByPlaceholderText("Search overrides")).toBeDefined();
     expect(screen.queryByRole("button", { name: "Create override" })).toBeDefined();
   });
 
@@ -354,7 +557,7 @@ describe("OverrideManager", () => {
       <SuperpositionUIProvider
         config={{
           ...testConfig,
-          capabilities: { overrides: { editContext: true } },
+          capabilities: { overrides: { create: true, update: true } },
         }}
       >
         <AlertProvider>
@@ -370,7 +573,6 @@ describe("OverrideManager", () => {
 
     expect(screen.getByRole("button", { name: "Add Context" })).toBeDefined();
     expect(screen.getByRole("button", { name: "Add Override" })).toBeDefined();
-    expect(screen.getByRole("button", { name: "Create" })).toBeDefined();
   });
 
   it("shows context controls when creating without a fixed scope", async () => {
@@ -386,6 +588,9 @@ describe("OverrideManager", () => {
 
     expect(screen.getByRole("button", { name: "Add Context" })).toBeDefined();
     expect(screen.getByRole("button", { name: "Add Override" })).toBeDefined();
+    expect(screen.getAllByText("Add Context").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Add Override").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Select a key")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "Create" }));
 
@@ -399,7 +604,49 @@ describe("OverrideManager", () => {
       <SuperpositionUIProvider
         config={{
           ...testConfig,
-          capabilities: { overrides: { editContext: true } },
+          capabilities: { overrides: { create: true, update: true } },
+        }}
+      >
+        <AlertProvider>
+          <OverrideManager />
+        </AlertProvider>
+      </SuperpositionUIProvider>,
+    );
+
+    fireEvent.click(await screen.findByText("Create override"));
+
+    await chooseFromDropdownField("Add Context", "region");
+    fireEvent.change(screen.getByLabelText("region"), {
+      target: { value: "us-east-1" },
+    });
+    await chooseFromDropdownField("Add Override", "app.title");
+    fireEvent.change(screen.getByLabelText("app.title"), {
+      target: { value: "Scoped App" },
+    });
+    fireEvent.change(screen.getByLabelText("Reason for Change*"), {
+      target: { value: "test create" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+
+    // The create request is sent — the backend is responsible for authorization
+    await waitFor(() => {
+      expect(
+        mockFetch.mock.calls.some(
+          ([url, init]) => url === "https://test.com/context" && init?.method === "PUT",
+        ),
+      ).toBe(true);
+    });
+  });
+
+  it("keeps scoped dimensions available in create override", async () => {
+    render(
+      <SuperpositionUIProvider
+        config={{
+          ...testConfig,
+          scope: {
+            context: { region: "us-east-1" },
+          },
         }}
       >
         <AlertProvider>
@@ -419,18 +666,24 @@ describe("OverrideManager", () => {
       target: { value: "Scoped App" },
     });
     fireEvent.change(screen.getByLabelText("Reason for Change*"), {
-      target: { value: "test create" },
+      target: { value: "test create with scoped dimension" },
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Create" }));
 
-    // The create request is sent — the backend is responsible for authorization
     await waitFor(() => {
-      expect(
-        mockFetch.mock.calls.some(
-          ([url, init]) => url === "https://test.com/context" && init?.method === "PUT",
-        ),
-      ).toBe(true);
+      expect(mockFetch).toHaveBeenCalledWith(
+        "https://test.com/context",
+        expect.objectContaining({
+          method: "PUT",
+          body: JSON.stringify({
+            context: { region: "us-east-1" },
+            override: { "app.title": "Scoped App" },
+            description: undefined,
+            change_reason: "test create with scoped dimension",
+          }),
+        }),
+      );
     });
   });
 
@@ -461,11 +714,64 @@ describe("OverrideManager", () => {
     );
 
     expect(await screen.findByText("Could not load overrides")).toBeDefined();
-    expect(screen.getByText(/server down/)).toBeDefined();
     expect(screen.queryByText("No overrides found")).toBeNull();
     expect(screen.queryByText("!")).toBeNull();
     expect(screen.queryByText(/context\?/)).toBeNull();
-    expect(screen.queryByPlaceholderText("Search overrides")).toBeNull();
+    expect(screen.getByPlaceholderText("Search overrides")).toBeDefined();
+  });
+
+  it("clears save errors when the override form closes", async () => {
+    mockFetch.mockImplementation((url: string, init?: RequestInit) => {
+      if (init?.method === "PUT") {
+        return Promise.resolve({
+          ok: false,
+          status: 500,
+          headers: new Headers({ "content-length": "11" }),
+          text: () => Promise.resolve("server down"),
+        });
+      }
+
+      if (url.includes("/dimension")) {
+        return Promise.resolve(buildResponse(mockDimensions));
+      }
+
+      if (url.includes("/default-config")) {
+        return Promise.resolve(buildResponse(mockDefaultConfigs));
+      }
+
+      return Promise.resolve(buildResponse(mockOverrides));
+    });
+
+    render(
+      <SuperpositionUIProvider config={testConfig}>
+        <AlertProvider>
+          <OverrideManager />
+        </AlertProvider>
+      </SuperpositionUIProvider>,
+    );
+
+    fireEvent.click(await screen.findByText("Create override"));
+
+    await chooseFromDropdown("Add Context", "region");
+    fireEvent.change(screen.getByLabelText("region"), {
+      target: { value: "us-east-1" },
+    });
+    await chooseFromDropdown("Add Override", "app.title");
+    fireEvent.change(screen.getByLabelText("app.title"), {
+      target: { value: "Scoped App" },
+    });
+    fireEvent.change(screen.getByLabelText("Reason for Change*"), {
+      target: { value: "test create" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+
+    expect(await screen.findByText("Could not save override")).toBeDefined();
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    fireEvent.click(await screen.findByText("Create override"));
+
+    expect(screen.queryByText("Could not save override")).toBeNull();
   });
 
   it("opens change information for an override card", async () => {
@@ -496,11 +802,13 @@ describe("OverrideManager", () => {
       </SuperpositionUIProvider>,
     );
 
-    expect(await screen.findByText("US App")).toBeDefined();
+    expect(
+      await screen.findByRole("button", { name: "Edit override ctx-1" }),
+    ).toBeDefined();
     expect(screen.queryAllByRole("button", { name: /Delete override/ }).length).toBe(0);
   });
 
-  it("shows expanded override details without edit or delete actions", async () => {
+  it("shows expanded override details while keeping edit available and delete hidden", async () => {
     render(
       <SuperpositionUIProvider config={testConfig}>
         <AlertProvider>
@@ -509,17 +817,28 @@ describe("OverrideManager", () => {
       </SuperpositionUIProvider>,
     );
 
-    expect(await screen.findByText("US App")).toBeDefined();
+    expect(
+      await screen.findByRole("button", { name: "Edit override ctx-1" }),
+    ).toBeDefined();
     expect(screen.getByRole("button", { name: "Edit override ctx-1" })).toBeDefined();
 
-    fireEvent.click(screen.getByRole("button", { name: "Expand conditions for ctx-1" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Expand override details for ctx-1" }),
+    );
 
-    expect(screen.getByRole("button", { name: "Collapse conditions for ctx-1" })).toBeDefined();
-    expect(screen.queryByRole("button", { name: "Edit override ctx-1" })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Collapse override details for ctx-1" }),
+    ).toBeDefined();
+    expect(screen.getByRole("button", { name: "Edit override ctx-1" })).toBeDefined();
     expect(screen.queryAllByRole("button", { name: /Delete override/ }).length).toBe(0);
-    expect(screen.getByText("Field")).toBeDefined();
-    expect(screen.getByText("Operator")).toBeDefined();
-    expect(screen.getAllByText("Value").length).toBeGreaterThan(0);
+    const details = screen.getByLabelText("Expanded override details for ctx-1");
+    expect(within(details).getByText("Dimension")).toBeDefined();
+    expect(within(details).getByText("region")).toBeDefined();
+    expect(within(details).getByText("us-east-1")).toBeDefined();
+    expect(within(details).getByText("Key")).toBeDefined();
+    expect(within(details).getAllByText("Value").length).toBeGreaterThan(0);
+    expect(within(details).queryByText(/Dimension:/)).toBeNull();
+    expect(within(details).queryByText(/Value:/)).toBeNull();
   });
 
   it("filters overrides by scoped context", async () => {
@@ -537,18 +856,80 @@ describe("OverrideManager", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("Fixed Scope")).toBeDefined();
+      expect(screen.getByRole("button", { name: "Edit override ctx-1" })).toBeDefined();
     });
 
-    expect(screen.getByText("US App")).toBeDefined();
-    expect(screen.queryByText("EU App")).toBeNull();
+    expect(screen.getByRole("button", { name: "Edit override ctx-1" })).toBeDefined();
+    expect(screen.queryByRole("button", { name: "Edit override ctx-2" })).toBeNull();
     expect(mockFetch).toHaveBeenCalledWith(
-      "https://test.com/context?page=1&count=20&dimension[region]=us-east-1&dimension_match_strategy=subset",
+      "https://test.com/context?page=1&count=10&dimension[region]=us-east-1&dimension_match_strategy=non_conflicting",
       expect.objectContaining({ method: "GET" }),
     );
   });
 
-  it("uses exact context filtering when strict is enabled", async () => {
+  it("shows locked host scope in the header metadata", async () => {
+    render(
+      <SuperpositionUIProvider
+        config={{
+          ...testConfig,
+          scope: {
+            context: {
+              cid: "swiggy",
+              region: "india",
+              env: "production",
+              country: "IN",
+              merchant_id: "m_123",
+            },
+          },
+        }}
+      >
+        <AlertProvider>
+          <OverrideManager />
+        </AlertProvider>
+      </SuperpositionUIProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Edit override ctx-1" })).toBeDefined();
+    });
+
+    const lockedScope = screen.getByRole("group", { name: "Locked scope" });
+    const headerDescription = screen.getByText(
+      "Review scoped overrides, then expand a card to inspect its conditions and values.",
+    );
+    const header = headerDescription.closest("header");
+
+    expect(header).toBeTruthy();
+    expect(header?.contains(lockedScope)).toBe(false);
+    expect(within(lockedScope).getByText("Scope")).toBeDefined();
+    expect(within(lockedScope).getByTitle("cid = swiggy")).toBeDefined();
+    expect(within(lockedScope).getByTitle("region = india")).toBeDefined();
+    expect(within(lockedScope).getByTitle("env = production")).toBeDefined();
+    expect(within(lockedScope).getByText("+2 more")).toBeDefined();
+  });
+
+  it("does not show locked scope when the host scope is unlocked", async () => {
+    render(
+      <SuperpositionUIProvider
+        config={{
+          ...testConfig,
+          scope: { context: { region: "us-east-1" }, locked: false },
+        }}
+      >
+        <AlertProvider>
+          <OverrideManager />
+        </AlertProvider>
+      </SuperpositionUIProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Edit override ctx-1" })).toBeDefined();
+    });
+
+    expect(screen.queryByRole("group", { name: "Locked scope" })).toBeNull();
+  });
+
+  it("uses non-conflicting context filtering when strict is enabled", async () => {
     render(
       <SuperpositionUIProvider
         config={{
@@ -564,13 +945,13 @@ describe("OverrideManager", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("Fixed Scope")).toBeDefined();
+      expect(screen.getByRole("button", { name: "Edit override ctx-1" })).toBeDefined();
     });
 
-    expect(screen.getByText("US App")).toBeDefined();
-    expect(screen.queryByText("EU App")).toBeNull();
+    expect(screen.getByRole("button", { name: "Edit override ctx-1" })).toBeDefined();
+    expect(screen.queryByRole("button", { name: "Edit override ctx-2" })).toBeNull();
     expect(mockFetch).toHaveBeenCalledWith(
-      "https://test.com/context?page=1&count=20&dimension[region]=us-east-1&dimension_match_strategy=exact",
+      "https://test.com/context?page=1&count=10&dimension[region]=us-east-1&dimension_match_strategy=non_conflicting",
       expect.objectContaining({ method: "GET" }),
     );
   });
@@ -590,7 +971,7 @@ describe("OverrideManager", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("US App")).toBeDefined();
+      expect(screen.getByRole("button", { name: "Edit override ctx-1" })).toBeDefined();
     });
 
     // Both overrides have region: us-east-1 matching the scope
@@ -598,7 +979,7 @@ describe("OverrideManager", () => {
     expect(screen.getByRole("button", { name: "Edit override ctx-3" })).toBeDefined();
   });
 
-  it("shows edit controls only for overrides that include all scoped dimensions", async () => {
+  it("shows edit controls for all overrides when update capability is enabled", async () => {
     render(
       <SuperpositionUIProvider
         config={{
@@ -615,11 +996,11 @@ describe("OverrideManager", () => {
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "Edit override ctx-1" })).toBeDefined();
     });
-    // ctx-3 only has region, missing env — not editable from this scope
-    expect(screen.queryByRole("button", { name: "Edit override ctx-3" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Edit override ctx-3" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Edit override ctx-4" })).toBeDefined();
   });
 
-  it("uses scoped context to gate edits", async () => {
+  it("does not let scoped context hide edit controls", async () => {
     render(
       <SuperpositionUIProvider
         config={{
@@ -636,13 +1017,37 @@ describe("OverrideManager", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("Env App")).toBeDefined();
+      expect(screen.getByRole("button", { name: "Edit override ctx-4" })).toBeDefined();
     });
 
-    // Only overrides matching the scoped context can be edited
-    expect(screen.queryByRole("button", { name: "Edit override ctx-1" })).toBeDefined();
-    expect(screen.queryByRole("button", { name: "Edit override ctx-3" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Edit override ctx-4" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Edit override ctx-1" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Edit override ctx-3" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Edit override ctx-4" })).toBeDefined();
+  });
+
+  it("opens edit even when the row falls outside the active scoped context", async () => {
+    render(
+      <SuperpositionUIProvider
+        config={{
+          ...testConfig,
+          scope: {
+            context: { region: "us-east-1", env: "prod" },
+          },
+        }}
+      >
+        <AlertProvider>
+          <OverrideManager />
+        </AlertProvider>
+      </SuperpositionUIProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Edit override ctx-4" })).toBeDefined();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit override ctx-3" }));
+
+    expect(await screen.findByRole("dialog", { name: "Edit Overrides" })).toBeDefined();
   });
 
   it("hides override values outside defaultConfigPrefix", async () => {
@@ -660,18 +1065,22 @@ describe("OverrideManager", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("US App")).toBeDefined();
+      expect(screen.getByRole("button", { name: "Edit override ctx-1" })).toBeDefined();
     });
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Expand override details for ctx-1" }),
+    );
 
     expect(document.body.textContent).toContain("app.title");
     expect(document.body.textContent).not.toContain("feature.enabled");
     expect(mockFetch).toHaveBeenCalledWith(
-      "https://test.com/context?page=1&count=20&prefix=app.",
+      "https://test.com/context?page=1&count=10&prefix=app.",
       expect.objectContaining({ method: "GET" }),
     );
   });
 
-  it("creates a scoped override from the structured form", async () => {
+  it("does not include fixed scope when creating from the structured form", async () => {
     render(
       <SuperpositionUIProvider
         config={{
@@ -689,7 +1098,8 @@ describe("OverrideManager", () => {
 
     fireEvent.click(await screen.findByText("Create override"));
 
-    // The scoped context (region: us-east-1) is already locked in, so just add an override
+    expect(screen.queryByText("Fixed Scope")).toBeNull();
+
     await chooseFromDropdown("Add Override", "app.title");
     fireEvent.change(screen.getByLabelText("app.title"), {
       target: { value: "Scoped App" },
@@ -707,7 +1117,7 @@ describe("OverrideManager", () => {
         expect.objectContaining({
           method: "PUT",
           body: JSON.stringify({
-            context: { region: "us-east-1" },
+            context: {},
             override: { "app.title": "Scoped App" },
             description: undefined,
             change_reason: "test create",
@@ -762,7 +1172,7 @@ describe("OverrideManager", () => {
         expect.objectContaining({
           method: "PUT",
           body: JSON.stringify({
-            context: { merchant_id: "m_123" },
+            context: {},
             override: { "app.title": "Scoped App" },
             description: undefined,
             change_reason: "test create",
@@ -772,12 +1182,12 @@ describe("OverrideManager", () => {
     });
   });
 
-  it("allows context editing when editContext capability is enabled", async () => {
+  it("allows context editing when update capability is enabled", async () => {
     render(
       <SuperpositionUIProvider
         config={{
           ...testConfig,
-          capabilities: { overrides: { editContext: true } },
+          capabilities: { overrides: { create: true, update: true } },
           scope: {
             context: { region: "us-east-1" },
           },
@@ -812,7 +1222,7 @@ describe("OverrideManager", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("US App")).toBeDefined();
+      expect(screen.getAllByText("region:us-east-1").length).toBeGreaterThan(0);
     });
 
     expect(screen.queryByText("Create override")).toBeNull();

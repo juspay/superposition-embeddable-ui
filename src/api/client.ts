@@ -186,8 +186,13 @@ export class SuperpositionClient {
     return this.request<T>("GET", path, { query });
   }
 
-  post<T>(path: string, body?: unknown, query?: Record<string, unknown>): Promise<T> {
-    return this.request<T>("POST", path, { body, query });
+  post<T>(
+    path: string,
+    body?: unknown,
+    query?: Record<string, unknown>,
+    headers?: Record<string, string>,
+  ): Promise<T> {
+    return this.request<T>("POST", path, { body, query, headers });
   }
 
   patch<T>(path: string, body?: unknown): Promise<T> {
@@ -209,7 +214,7 @@ export class SuperpositionApiError extends Error {
     public body: string,
     public url: string,
   ) {
-    super(`API error ${status} for ${url}: ${body}`);
+    super("Request failed.");
     this.name = "SuperpositionApiError";
   }
 }

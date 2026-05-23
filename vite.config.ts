@@ -2,19 +2,7 @@ import react from "@vitejs/plugin-react";
 import { resolve } from "path";
 import { defineConfig } from "vite";
 import dts from "vite-plugin-dts";
-
-const externalPackages = [
-  "react",
-  "react-dom",
-  "react-dom/client",
-  "react/jsx-runtime",
-];
-
-function isExternal(id: string) {
-  return (
-    externalPackages.includes(id) || id.startsWith("@juspay/blend-design-system")
-  );
-}
+import { isLibraryExternal } from "./vite.external";
 
 export default defineConfig({
   plugins: [
@@ -46,13 +34,18 @@ export default defineConfig({
       cssFileName: "styles",
     },
     rollupOptions: {
-      external: isExternal,
+      external: isLibraryExternal,
       output: {
         globals: {
           react: "React",
           "react-dom": "ReactDOM",
           "react-dom/client": "ReactDOM",
           "react/jsx-runtime": "jsxRuntime",
+        },
+        manualChunks(id) {
+          return id.endsWith("/src/blend-react-compat.ts")
+            ? "blend-react-compat"
+            : undefined;
         },
       },
     },

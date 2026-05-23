@@ -11,6 +11,7 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { auditLogsApi } from "../api/audit-logs";
@@ -19,6 +20,7 @@ import { defaultConfigsApi } from "../api/default-configs";
 import { dimensionsApi } from "../api/dimensions";
 import { overridesApi } from "../api/overrides";
 import { resolveApi } from "../api/resolve";
+import "../blend-react-compat";
 import type {
   JsonValue,
   SuperpositionEmbeddableConfig,
@@ -29,6 +31,27 @@ import type {
 import { getLockedDimensions, mergeScopedContext } from "../utils/context-filter";
 import { normalizeSuperpositionConfig } from "../utils/normalize-config";
 import { ThemeContext, type SuperpositionThemeValue } from "./theme-context";
+
+/**
+ * Defensive patch: Blend's DataTable registers a document-level click handler
+ * that calls `.closest()` on `event.target` without guarding against non-Element
+ * targets (e.g. Document, Window, text nodes). This adds a safe no-op `.closest()`
+ * to `EventTarget.prototype` so the call doesn't throw.
+ */
+if (typeof EventTarget !== "undefined" && !("closest" in EventTarget.prototype)) {
+  (EventTarget.prototype as EventTarget & { closest: () => null }).closest =
+    function closest() {
+      return null;
+    };
+}
+
+function markImplicitButtonsAsNonSubmit(root: HTMLElement | null) {
+  if (!root) return;
+
+  root.querySelectorAll<HTMLButtonElement>("button:not([type])").forEach((button) => {
+    button.type = "button";
+  });
+}
 
 export type BoundaryContext = Record<string, JsonValue>;
 
@@ -104,6 +127,13 @@ function cssLength(value: unknown): string {
   return typeof value === "number" ? `${value}px` : String(value);
 }
 
+function cssJustifyContentFromAlign(align?: "left" | "center" | "right") {
+  if (align === "center") return "center";
+  if (align === "right") return "flex-end";
+  if (align === "left") return "flex-start";
+  return undefined;
+}
+
 function buildBlendFoundationTokens(tokens?: SuperpositionThemeTokens): BlendThemeType {
   const colors = tokens?.colors;
   const legacyColorOverrides = {
@@ -170,6 +200,7 @@ function buildThemeVars(
   const table = tokens?.table;
   const tableHeader = table?.header;
   const button = tokens?.button;
+  const card = tokens?.card;
   const buttonPrimary = button?.primary;
   const buttonSecondary = button?.secondary;
   const buttonDanger = button?.danger;
@@ -198,11 +229,10 @@ function buildThemeVars(
     typography?.fontFamily ??
     'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif';
   const resolvedHeadingFontFamily = resolvedFontFamily;
-  const resolvedFontSize = cssLength(
-    typography?.fontSize ?? foundationFont.fontSize[14],
-  );
-  const typographyLineHeight = (typography as { lineHeight?: string | number } | undefined)
-    ?.lineHeight;
+  const resolvedFontSize = cssLength(typography?.fontSize ?? foundationFont.fontSize[14]);
+  const typographyLineHeight = (
+    typography as { lineHeight?: string | number } | undefined
+  )?.lineHeight;
 
   return {
     "--sp-color-bg":
@@ -238,6 +268,20 @@ function buildThemeVars(
       layout?.modalMinWidth ?? "min(400px, calc(100vw - (var(--sp-space-lg) * 2)))",
     "--sp-modal-max-width": layout?.modalMaxWidth ?? "600px",
     "--sp-modal-max-height": layout?.modalMaxHeight ?? "min(80vh, 720px)",
+    "--sp-override-editor-modal-width":
+      layout?.overrideEditorModalWidth ?? "min(840px, calc(100vw - 48px))",
+    "--sp-override-editor-modal-max-width":
+      layout?.overrideEditorModalMaxWidth ?? "860px",
+    "--sp-override-editor-modal-max-height":
+      layout?.overrideEditorModalMaxHeight ?? "min(88vh, 900px)",
+    "--sp-override-details-modal-width":
+      layout?.overrideDetailsModalWidth ?? "min(900px, calc(100vw - 32px))",
+    "--sp-override-details-modal-max-width":
+      layout?.overrideDetailsModalMaxWidth ?? "900px",
+    "--sp-override-details-modal-max-height":
+      layout?.overrideDetailsModalMaxHeight ?? "min(86vh, 860px)",
+    "--sp-override-list-gap": layout?.overrideListGap ?? "var(--sp-space-lg)",
+    "--sp-override-card-padding": layout?.overrideCardPadding ?? "14px 16px",
     "--sp-confirm-width":
       layout?.confirmWidth ?? "min(420px, calc(100vw - (var(--sp-space-lg) * 2)))",
     "--sp-alert-min-width":
@@ -248,6 +292,7 @@ function buildThemeVars(
     "--sp-compact-control-padding":
       layout?.compactControlPadding ?? "calc(var(--sp-space-xs) / 2) var(--sp-space-xs)",
     "--sp-color-surface-muted":
+      colors?.surfaceMuted ??
       "color-mix(in oklab, var(--sp-color-panel) 88%, var(--sp-color-bg))",
     "--sp-color-surface-subtle":
       "color-mix(in oklab, var(--sp-color-panel) 72%, var(--sp-color-bg))",
@@ -256,7 +301,15 @@ function buildThemeVars(
     "--sp-control-text": "var(--sp-color-text)",
     "--sp-control-border": "var(--sp-color-border)",
     "--sp-control-radius": "var(--sp-radius-md)",
-    "--sp-card-radius": "var(--sp-radius-lg)",
+    "--sp-card-bg": card?.bgColor ?? "var(--sp-color-panel)",
+    "--sp-card-border": card?.borderColor ?? "var(--sp-color-border)",
+    "--sp-card-radius": card?.borderRadius ?? "var(--sp-radius-lg)",
+    "--sp-card-shadow": card?.shadow ?? "var(--sp-shadow-sm)",
+    "--sp-card-padding": card?.padding ?? "18px",
+    "--sp-card-hover-border":
+      "color-mix(in oklab, var(--sp-color-primary) 14%, var(--sp-card-border))",
+    "--sp-card-hover-shadow":
+      "0 10px 24px color-mix(in oklab, var(--sp-color-text) 8%, transparent)",
     "--sp-inline-radius": "var(--sp-radius-sm)",
     "--sp-pill-radius": "999px",
     "--sp-table-header-bg":
@@ -340,6 +393,7 @@ function buildThemeVars(
     "--sp-search-padding": search?.padding ?? "var(--sp-space-sm) var(--sp-space-md)",
     "--sp-search-width": search?.width ?? "min(360px, 100%)",
     "--sp-search-height": search?.height ?? "40px",
+    "--sp-search-justify-content": cssJustifyContentFromAlign(search?.align),
     "--sp-search-font-size": cssLength(search?.fontSize ?? foundationFont.fontSize[14]),
     "--sp-search-font-weight": search?.fontWeight ?? foundationFont.weight[400],
     "--sp-search-shadow": search?.shadow ?? "none",
@@ -390,9 +444,7 @@ function buildThemeVars(
       "color-mix(in oklab, var(--sp-color-text) 18%, transparent)",
     "--sp-tooltip-radius": tooltip?.borderRadius ?? "var(--sp-inline-radius)",
     "--sp-tooltip-shadow": tooltip?.shadow ?? "var(--sp-shadow-sm)",
-    "--sp-tooltip-font-size": cssLength(
-      tooltip?.fontSize ?? foundationFont.fontSize[12],
-    ),
+    "--sp-tooltip-font-size": cssLength(tooltip?.fontSize ?? foundationFont.fontSize[12]),
     "--sp-page-title-text": pageTitle?.textColor ?? "var(--sp-color-text)",
     "--sp-page-title-font-size": cssLength(
       pageTitle?.fontSize ?? foundationFont.fontSize[32],
@@ -413,10 +465,9 @@ function buildThemeVars(
       bannerWarning?.padding ??
       banner?.padding ??
       `${foundationUnit[12]} ${foundationUnit[14]}`,
-    "--sp-banner-font-size":
-      cssLength(
-        bannerWarning?.fontSize ?? banner?.fontSize ?? foundationFont.fontSize[14],
-      ),
+    "--sp-banner-font-size": cssLength(
+      bannerWarning?.fontSize ?? banner?.fontSize ?? foundationFont.fontSize[14],
+    ),
     "--sp-banner-font-weight":
       bannerWarning?.fontWeight ?? banner?.fontWeight ?? foundationFont.weight[500],
     "--sp-toast-bg": toast?.bgColor ?? "var(--sp-color-panel)",
@@ -446,12 +497,15 @@ function buildThemeVars(
     "--sp-feedback-info-text": "var(--sp-color-text)",
     "--sp-feedback-info-border":
       "color-mix(in oklab, var(--sp-color-primary) 24%, var(--sp-color-border))",
-    "--sp-feedback-success-bg":
-      isDark ? foundationColors.green[950] : foundationColors.green[50],
-    "--sp-feedback-success-text":
-      isDark ? foundationColors.green[300] : foundationColors.green[700],
-    "--sp-feedback-success-border":
-      isDark ? foundationColors.green[800] : foundationColors.green[200],
+    "--sp-feedback-success-bg": isDark
+      ? foundationColors.green[950]
+      : foundationColors.green[50],
+    "--sp-feedback-success-text": isDark
+      ? foundationColors.green[300]
+      : foundationColors.green[700],
+    "--sp-feedback-success-border": isDark
+      ? foundationColors.green[800]
+      : foundationColors.green[200],
     "--sp-feedback-warning-bg":
       "color-mix(in oklab, var(--sp-color-warning) 18%, var(--sp-color-panel))",
     "--sp-feedback-warning-text":
@@ -527,6 +581,7 @@ export function SuperpositionUIProvider({
   config,
   children,
 }: SuperpositionUIProviderProps) {
+  const rootRef = useRef<HTMLDivElement>(null);
   const normalizedConfig = useMemo(() => normalizeSuperpositionConfig(config), [config]);
   const [systemMode, setSystemMode] =
     useState<Exclude<SuperpositionThemeMode, "system">>(getSystemThemeMode);
@@ -617,6 +672,38 @@ export function SuperpositionUIProvider({
   const blendTheme =
     themeValue.resolvedMode === "dark" ? BlendTheme.DARK : BlendTheme.LIGHT;
 
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return undefined;
+
+    markImplicitButtonsAsNonSubmit(root);
+
+    if (typeof MutationObserver === "undefined") {
+      return undefined;
+    }
+
+    const observer = new MutationObserver(() => {
+      markImplicitButtonsAsNonSubmit(root);
+    });
+
+    observer.observe(root, { childList: true, subtree: true });
+
+    return () => observer.disconnect();
+  }, []);
+
+  const handleRootClickCapture = useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+
+      const button = target.closest("button");
+      if (button instanceof HTMLButtonElement && !button.hasAttribute("type")) {
+        button.type = "button";
+      }
+    },
+    [],
+  );
+
   return (
     <SuperpositionContext.Provider value={value}>
       <ThemeContext.Provider value={themeValue}>
@@ -626,8 +713,10 @@ export function SuperpositionUIProvider({
           componentTokens={blendComponentTokens}
         >
           <div
+            ref={rootRef}
             className="sp-ui"
             data-sp-theme={themeValue.resolvedMode}
+            onClickCapture={handleRootClickCapture}
             style={themeStyles}
           >
             {children}

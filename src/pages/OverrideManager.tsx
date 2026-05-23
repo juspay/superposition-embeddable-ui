@@ -1,25 +1,32 @@
-import type React from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import "../blend-react-compat";
+
 import {
+  Tooltip as BlendTooltip,
   Button,
   ButtonSize,
   ButtonSubType,
   ButtonType,
+  TooltipSide,
 } from "@juspay/blend-design-system";
+import { Plus } from "lucide-react";
+import type React from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FieldEntryState } from "../components";
 import {
-  buttonPrimary,
-  buttonSecondary,
-  ConditionBadges,
   defaultEntryFromSchema,
   EmptyState,
   FormField,
+  InlineNotice,
   inputStyle,
   Modal,
+  PageHeader,
   Pagination,
+  resolveTableSearchAlign,
+  searchAlignStyle,
   SearchField,
   StructuredContextOverrideForm,
-  Tooltip,
+  Surface,
+  Toolbar,
 } from "../components";
 import { useApi, useMutation } from "../hooks/useApi";
 import { useAlerts } from "../providers/AlertProvider";
@@ -28,11 +35,11 @@ import type { ContextOverride, JsonValue, PutContextRequest } from "../types";
 import {
   filterRecordByPrefix,
   matchesPrefix,
-  mergeScopedContext,
+  matchesSearchQuery,
   normalizeFilterValues,
   paginateRows,
 } from "../utils";
-import { contextCanBeEditedInScope } from "../utils/context-filter";
+import { formatErrorMessage } from "../utils/errors";
 import {
   canUseFeatureAction,
   FeatureUnavailable,
@@ -58,6 +65,25 @@ function filterOverrideValuesByPrefix(
 
   if (Object.keys(override_).length === 0) return null;
   return { ...row, override_ };
+}
+
+function matchesOverrideSearch(row: ContextOverride, query: string): boolean {
+  return matchesSearchQuery(
+    [
+      row.id,
+      row.override_id,
+      row.value,
+      row.override_,
+      row.created_at,
+      row.created_by,
+      row.last_modified_at,
+      row.last_modified_by,
+      row.description,
+      row.change_reason,
+      row.weight,
+    ],
+    query,
+  );
 }
 
 function entryFromOverrideValue(
@@ -112,27 +138,6 @@ function PencilIcon() {
         fill="none"
         stroke="currentColor"
         strokeLinecap="round"
-        strokeWidth="1.7"
-      />
-    </svg>
-  );
-}
-
-function FilterIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 20 20"
-      width="var(--sp-icon-size)"
-      height="var(--sp-icon-size)"
-      style={{ color: "var(--sp-color-primary)", flex: "0 0 auto" }}
-    >
-      <path
-        d="M3.4 4.9c-.4-.5 0-1.2.6-1.2h12c.6 0 1 .7.6 1.2L12 10.5v4.1c0 .3-.2.6-.4.7l-2.4 1.2c-.5.2-1-.1-1-.7v-5.3L3.4 4.9Z"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
         strokeWidth="1.7"
       />
     </svg>
@@ -239,6 +244,243 @@ function CalendarIcon() {
   );
 }
 
+function LockIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 20 20"
+      width="14"
+      height="14"
+      style={{ color: "var(--sp-color-muted)", flex: "0 0 auto" }}
+    >
+      <rect
+        x="4.5"
+        y="8.2"
+        width="11"
+        height="8"
+        rx="2"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      />
+      <path
+        d="M7.3 8.2V6.4a2.7 2.7 0 0 1 5.4 0v1.8"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.8"
+      />
+    </svg>
+  );
+}
+
+function FixedScopeSection({ scope }: { scope: Record<string, JsonValue> }) {
+  const entries = Object.entries(scope);
+
+  if (entries.length === 0) return null;
+
+  return (
+    <section
+      style={{
+        display: "grid",
+        gap: 14,
+        padding: "22px 24px",
+        border: "1px solid var(--sp-card-border)",
+        borderRadius: "var(--sp-card-radius)",
+        background: "var(--sp-card-bg)",
+        boxShadow: "var(--sp-card-shadow)",
+      }}
+    >
+      <div style={{ display: "grid", gap: 6 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            color: "var(--sp-color-text)",
+            fontSize: "1rem",
+            fontWeight: 800,
+            lineHeight: 1.2,
+          }}
+        >
+          Fixed Scope
+          <InfoIcon />
+        </div>
+        <div
+          style={{
+            color: "var(--sp-color-muted)",
+            fontSize: "0.92rem",
+            fontWeight: 500,
+            lineHeight: 1.45,
+          }}
+        >
+          These conditions are fixed and cannot be changed.
+        </div>
+      </div>
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 12,
+        }}
+      >
+        {entries.map(([key, value]) => (
+          <span
+            key={key}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 10,
+              minHeight: 42,
+              padding: "0 16px",
+              border: "1px solid var(--sp-color-border)",
+              borderRadius: "var(--sp-control-radius)",
+              background: "var(--sp-color-panel)",
+              color: "var(--sp-color-text)",
+              fontSize: "0.94rem",
+              fontWeight: 650,
+              lineHeight: 1,
+              boxShadow:
+                "0 1px 0 color-mix(in oklab, var(--sp-color-text) 3%, transparent)",
+            }}
+          >
+            <span style={{ fontWeight: 700 }}>{key}</span>
+            <span style={{ color: "var(--sp-color-muted)", fontWeight: 800 }}>==</span>
+            <span>{jsonCellValue(value)}</span>
+            <LockIcon />
+          </span>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function LockedScopeMeta({ scope }: { scope?: Record<string, JsonValue> }) {
+  const entries = scope ? Object.entries(scope) : [];
+
+  if (entries.length === 0) return null;
+
+  const visibleEntries = entries.slice(0, 3);
+  const hiddenEntries = entries.slice(3);
+
+  return (
+    <div
+      role="group"
+      aria-label="Locked scope"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 14,
+        flexWrap: "wrap",
+        minWidth: 0,
+      }}
+    >
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 10,
+          minHeight: 38,
+          padding: "6px 14px",
+          border: "1px solid var(--sp-color-border)",
+          borderRadius: "var(--sp-control-radius)",
+          background: "var(--sp-color-surface-muted)",
+          color: "var(--sp-color-muted)",
+          fontSize: "0.9rem",
+          fontWeight: 600,
+          lineHeight: 1.25,
+        }}
+      >
+        <LockIcon />
+        Scope
+      </span>
+      {visibleEntries.map(([key, value]) => {
+        const formattedValue = jsonCellValue(value);
+
+        return (
+          <span
+            key={key}
+            title={`${key} = ${formattedValue}`}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "4px 8px",
+              boxSizing: "border-box",
+              minWidth: 0,
+              maxWidth: "min(100%, 420px)",
+              minHeight: 38,
+              padding: "6px 16px",
+              border: "1px solid var(--sp-color-border)",
+              borderRadius: "var(--sp-control-radius)",
+              background: "var(--sp-color-panel)",
+              color: "var(--sp-color-text)",
+              fontSize: "0.9rem",
+              fontWeight: 600,
+              lineHeight: 1.25,
+              whiteSpace: "normal",
+            }}
+          >
+            <span
+              style={{
+                flex: "0 1 auto",
+                minWidth: 0,
+                maxWidth: "100%",
+                lineHeight: 1.25,
+                overflowWrap: "anywhere",
+              }}
+            >
+              {key}
+            </span>
+            <span
+              style={{
+                color: "var(--sp-color-muted)",
+                fontWeight: 600,
+                lineHeight: 1.25,
+              }}
+            >
+              =
+            </span>
+            <span
+              style={{
+                flex: "1 1 10ch",
+                minWidth: 0,
+                lineHeight: 1.25,
+                overflowWrap: "anywhere",
+                wordBreak: "break-word",
+              }}
+            >
+              {formattedValue}
+            </span>
+          </span>
+        );
+      })}
+      {hiddenEntries.length > 0 && (
+        <span
+          title={hiddenEntries
+            .map(([key, value]) => `${key} = ${jsonCellValue(value)}`)
+            .join(", ")}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            minHeight: 38,
+            padding: "6px 14px",
+            border: "1px solid var(--sp-color-border)",
+            borderRadius: "var(--sp-control-radius)",
+            background: "var(--sp-color-panel)",
+            color: "var(--sp-color-text)",
+            fontSize: "0.9rem",
+            fontWeight: 650,
+            lineHeight: 1.25,
+          }}
+        >
+          +{hiddenEntries.length} more
+        </span>
+      )}
+    </div>
+  );
+}
+
 function ChevronDownIcon() {
   return (
     <svg
@@ -265,6 +507,53 @@ function jsonCellValue(value: JsonValue) {
   return JSON.stringify(value) ?? String(value);
 }
 
+function conditionPreview(dimension: string, value: JsonValue) {
+  return `${dimension}:${jsonCellValue(value)}`;
+}
+
+function ConditionBadge({
+  children,
+  tone = "primary",
+}: {
+  children: React.ReactNode;
+  tone?: "primary" | "neutral";
+}) {
+  const primary = tone === "primary";
+
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        minWidth: 0,
+        maxWidth: "min(100%, 560px)",
+        minHeight: 28,
+        padding: "5px 10px",
+        border: primary
+          ? "1px solid color-mix(in oklab, var(--sp-color-primary) 14%, var(--sp-color-border))"
+          : "1px solid var(--sp-color-border)",
+        borderRadius: "var(--sp-control-radius)",
+        background: primary
+          ? "color-mix(in oklab, var(--sp-color-primary) 11%, var(--sp-color-panel))"
+          : "var(--sp-color-surface-muted)",
+        color: primary ? "var(--sp-color-primary)" : "var(--sp-color-text)",
+        boxShadow: primary
+          ? "inset 0 0 0 1px color-mix(in oklab, var(--sp-color-primary) 4%, transparent)"
+          : "inset 0 0 0 1px color-mix(in oklab, var(--sp-color-text) 2%, transparent)",
+        fontSize: "0.82rem",
+        fontWeight: primary ? 700 : 650,
+        lineHeight: 1.25,
+        overflowWrap: "anywhere",
+        whiteSpace: "normal",
+        wordBreak: "break-word",
+      }}
+      title={typeof children === "string" ? children : undefined}
+    >
+      {children}
+    </span>
+  );
+}
+
 function OverrideKeyPill({ value }: { value: string }) {
   return (
     <code
@@ -277,7 +566,8 @@ function OverrideKeyPill({ value }: { value: string }) {
         maxWidth: "100%",
         height: 28,
         padding: "0 10px",
-        border: "1px solid color-mix(in oklab, var(--sp-color-primary) 16%, var(--sp-color-border))",
+        border:
+          "1px solid color-mix(in oklab, var(--sp-color-primary) 16%, var(--sp-color-border))",
         borderRadius: "var(--sp-inline-radius)",
         background:
           "color-mix(in oklab, var(--sp-color-primary) 7%, var(--sp-color-panel))",
@@ -305,12 +595,11 @@ function OverrideValuePill({ value }: { value: JsonValue }) {
       style={{
         display: "inline-flex",
         alignItems: "center",
-        justifyContent: "center",
         verticalAlign: "middle",
         boxSizing: "border-box",
         maxWidth: "100%",
-        height: 28,
-        padding: "0 10px",
+        minHeight: 28,
+        padding: "6px 10px",
         border: "1px solid var(--sp-feedback-success-border)",
         borderRadius: "var(--sp-inline-radius)",
         background: "var(--sp-feedback-success-bg)",
@@ -318,10 +607,9 @@ function OverrideValuePill({ value }: { value: JsonValue }) {
         fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
         fontSize: "0.82rem",
         fontWeight: 650,
-        lineHeight: 1,
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        whiteSpace: "nowrap",
+        lineHeight: 1.35,
+        whiteSpace: "normal",
+        overflowWrap: "anywhere",
       }}
       title={preview}
     >
@@ -344,14 +632,6 @@ function formatChangeTimestamp(value: ContextOverride["last_modified_at"]) {
     minute: "2-digit",
     second: "2-digit",
   });
-}
-
-function formatErrorMessage(error: string): string {
-  const apiError = error.match(/^API error (\d+) for .*:\s*(.*)$/);
-  if (!apiError) return error;
-
-  const [, status, detail] = apiError;
-  return detail ? `API error ${status}. ${detail}` : `API error ${status}.`;
 }
 
 function InfoBlock({
@@ -508,7 +788,7 @@ function ChangeMetadata({ row }: { row: ContextOverride }) {
 
 function ConditionSummary({
   entries,
-  maxVisible = 3,
+  maxVisible = 1,
 }: {
   entries: Array<[string, JsonValue]>;
   maxVisible?: number;
@@ -523,103 +803,33 @@ function ConditionSummary({
 
   const visibleEntries = entries.slice(0, maxVisible);
   const remaining = entries.length - visibleEntries.length;
-  const shouldClipSummary = entries.length > 1 || remaining > 0;
-
   return (
     <div
       style={{
         display: "flex",
         alignItems: "center",
-        flexWrap: "nowrap",
-        gap: 4,
+        flexWrap: "wrap",
+        gap: 8,
         minWidth: 0,
-        overflow: shouldClipSummary ? "hidden" : "visible",
       }}
     >
-      {visibleEntries.map(([key, value], index) => (
-        <div
-          key={key}
-          style={{
-            display: "contents",
-          }}
-        >
-          {index > 0 && (
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                color: "var(--sp-color-muted)",
-                fontSize: "0.72rem",
-                fontWeight: 700,
-                lineHeight: 1,
-                letterSpacing: "0.02em",
-                padding: "0 2px",
-                flex: "0 0 auto",
-              }}
-            >
-              AND
-            </span>
-          )}
-          <span
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              minHeight: 28,
-              maxWidth: shouldClipSummary ? "min(100%, 320px)" : "fit-content",
-              padding: "1px 9px",
-              border: "1px solid color-mix(in oklab, var(--sp-color-primary) 12%, var(--sp-color-border))",
-              borderRadius: "var(--sp-inline-radius)",
-              background: "color-mix(in oklab, var(--sp-color-primary) 6%, var(--sp-color-panel))",
-              color: "var(--sp-color-text)",
-              fontSize: "0.8rem",
-              fontWeight: 700,
-              lineHeight: 1.2,
-              flex: shouldClipSummary ? "0 1 auto" : "0 0 auto",
-            }}
-          >
-            <span style={{ color: "var(--sp-color-text)", fontWeight: 750 }}>
-              {key}
-            </span>
-            <span style={{ color: "var(--sp-color-muted)", fontWeight: 800 }}>=</span>
-            <span
-              style={{
-                minWidth: 0,
-                overflow: shouldClipSummary ? "hidden" : "visible",
-                textOverflow: shouldClipSummary ? "ellipsis" : "clip",
-                whiteSpace: "nowrap",
-                fontWeight: 550,
-              }}
-            >
-              {jsonCellValue(value)}
-            </span>
-          </span>
-        </div>
+      {visibleEntries.map(([dimension, value]) => (
+        <ConditionBadge key={dimension}>
+          {conditionPreview(dimension, value)}
+        </ConditionBadge>
       ))}
       {remaining > 0 && (
-        <span
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            minHeight: 24,
-            padding: "0 8px",
-            borderRadius: "var(--sp-inline-radius)",
-            background: "color-mix(in oklab, var(--sp-color-primary) 8%, var(--sp-color-panel))",
-            color: "var(--sp-color-primary)",
-            fontSize: "0.76rem",
-            fontWeight: 800,
-            lineHeight: 1,
-            flex: "0 0 auto",
-          }}
-        >
-          +{remaining} more
-        </span>
+        <ConditionBadge tone="neutral">
+          {`+${remaining} more condition${remaining === 1 ? "" : "s"}`}
+        </ConditionBadge>
       )}
     </div>
   );
 }
 
 function ReadOnlyConditionRows({ entries }: { entries: Array<[string, JsonValue]> }) {
+  const columnTemplate = "minmax(120px, 0.38fr) minmax(0, 1fr)";
+
   if (entries.length === 0) {
     return (
       <div
@@ -640,198 +850,141 @@ function ReadOnlyConditionRows({ entries }: { entries: Array<[string, JsonValue]
     <div
       style={{
         display: "grid",
-          gap: "var(--sp-space-sm)",
+        gap: 0,
+        minWidth: 0,
+        border: "1px solid var(--sp-color-border)",
+        borderRadius: "var(--sp-control-radius)",
+        background: "var(--sp-card-bg)",
+        overflow: "hidden",
       }}
     >
       <div
         style={{
-          display: "flex",
-          alignItems: "center",
-            gap: "var(--sp-space-sm)",
-          flexWrap: "wrap",
+          display: "grid",
+          gridTemplateColumns: columnTemplate,
+          gap: 16,
+          padding: "10px 14px",
+          borderBottom: "1px solid var(--sp-color-border)",
+          background: "var(--sp-color-surface-muted)",
+          color: "var(--sp-color-muted)",
+          fontSize: "0.78rem",
+          fontWeight: 800,
+          lineHeight: 1.2,
         }}
       >
-        <div
-          style={{
-            minWidth: 80,
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            color: "var(--sp-color-muted)",
-            fontSize: "0.82rem",
-            fontWeight: 800,
-          }}
-        >
-          Logic
-          <InfoIcon />
-        </div>
-        <div style={{ ...readOnlyControlStyle, minWidth: 160 }}>AND</div>
+        <div>Dimension</div>
+        <div>Value</div>
       </div>
-      <div style={{ overflowX: "auto" }}>
+      {entries.map(([key, value], index) => (
         <div
+          key={key}
           style={{
             display: "grid",
-              minWidth: 560,
-              gap: 10,
+            gridTemplateColumns: columnTemplate,
+            gap: 16,
+            alignItems: "center",
+            minWidth: 0,
+            padding: "12px 14px",
+            borderTop: index === 0 ? undefined : "1px solid var(--sp-color-border)",
           }}
         >
-          <div
+          <span
             style={{
-              display: "grid",
-              gridTemplateColumns: "minmax(140px, 1fr) minmax(120px, 0.75fr) minmax(180px, 2fr)",
-                gap: 10,
               color: "var(--sp-color-muted)",
-                fontSize: "0.8rem",
-              fontWeight: 800,
+              fontSize: "0.9rem",
+              fontWeight: 700,
+              lineHeight: 1.35,
+              overflowWrap: "anywhere",
             }}
           >
-            <div>Field</div>
-            <div>Operator</div>
-            <div>Value</div>
-          </div>
-          {entries.map(([key, value]) => (
-            <div
-              key={key}
-              style={{
-                display: "grid",
-                gridTemplateColumns: "minmax(140px, 1fr) minmax(120px, 0.75fr) minmax(180px, 2fr)",
-                gap: 10,
-                alignItems: "center",
-              }}
-            >
-              <div style={readOnlyControlStyle}>{key}</div>
-              <div style={readOnlyControlStyle}>==</div>
-              <div style={{ ...readOnlyControlStyle, wordBreak: "break-word" }}>
-                {jsonCellValue(value)}
-              </div>
-            </div>
-          ))}
+            {key}
+          </span>
+          <span
+            style={{
+              color: "var(--sp-color-text)",
+              fontSize: "0.94rem",
+              fontWeight: 600,
+              lineHeight: 1.45,
+              overflowWrap: "anywhere",
+            }}
+          >
+            {jsonCellValue(value)}
+          </span>
         </div>
-      </div>
+      ))}
     </div>
   );
 }
 
-const readOnlyControlStyle: React.CSSProperties = {
-  minHeight: 36,
-  display: "flex",
-  alignItems: "center",
-  padding: "0 12px",
-  border: "1px solid var(--sp-color-border)",
-  borderRadius: "var(--sp-control-radius)",
-  background: "var(--sp-color-panel)",
-  color: "var(--sp-color-text)",
-  fontSize: "0.88rem",
-  fontWeight: 500,
-  boxShadow: "0 1px 0 color-mix(in oklab, var(--sp-color-text) 3%, transparent)",
-};
-
 function OverrideValuesTable({ entries }: { entries: Array<[string, JsonValue]> }) {
-  const rowPadding = entries.length === 1 ? "6px 12px" : "8px 12px";
+  const columnTemplate = "minmax(140px, 0.38fr) minmax(0, 1fr)";
+
+  if (entries.length === 0) {
+    return (
+      <div
+        style={{
+          padding: "var(--sp-space-md)",
+          border: "1px dashed var(--sp-color-border)",
+          borderRadius: "var(--sp-control-radius)",
+          color: "var(--sp-color-muted)",
+          fontSize: "0.95rem",
+        }}
+      >
+        No override values
+      </div>
+    );
+  }
 
   return (
     <div
       style={{
-        overflowX: "auto",
-        paddingTop: 0,
+        display: "grid",
+        gap: 0,
+        minWidth: 0,
+        border: "1px solid var(--sp-color-border)",
+        borderRadius: "var(--sp-control-radius)",
+        background: "var(--sp-card-bg)",
+        overflow: "hidden",
       }}
     >
-      <table
+      <div
         style={{
-          width: "100%",
-          minWidth: 460,
-          borderCollapse: "separate",
-          borderSpacing: 0,
-          tableLayout: "fixed",
-          color: "var(--sp-color-text)",
+          display: "grid",
+          gridTemplateColumns: columnTemplate,
+          gap: 16,
+          padding: "10px 14px",
+          borderBottom: "1px solid var(--sp-color-border)",
+          background: "var(--sp-color-surface-muted)",
+          color: "var(--sp-color-muted)",
+          fontSize: "0.78rem",
+          fontWeight: 800,
+          lineHeight: 1.2,
         }}
       >
-        <colgroup>
-          <col style={{ width: 56 }} />
-          <col style={{ width: "44%" }} />
-          <col style={{ width: "56%" }} />
-        </colgroup>
-        <thead>
-          <tr>
-            <th
-              aria-label="Index"
-              style={{
-                padding: "6px 12px",
-                borderBottom: "1px solid var(--sp-color-border)",
-              }}
-            />
-            <th
-              style={{
-                textAlign: "left",
-                padding: "6px 12px",
-                borderBottom: "1px solid var(--sp-color-border)",
-                fontSize: "0.8rem",
-                fontWeight: 800,
-                color: "var(--sp-color-muted)",
-              }}
-            >
-              Key
-            </th>
-            <th
-              style={{
-                textAlign: "left",
-                padding: "6px 12px",
-                borderBottom: "1px solid var(--sp-color-border)",
-                boxShadow:
-                  "-10px 0 16px -16px color-mix(in oklab, var(--sp-color-text) 54%, transparent)",
-                fontSize: "0.8rem",
-                fontWeight: 800,
-                color: "var(--sp-color-muted)",
-              }}
-            >
-              Value
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {entries.map(([key, value], index) => (
-            <tr key={key}>
-              <td
-                style={{
-                  padding: rowPadding,
-                  borderBottom: "1px solid var(--sp-color-border)",
-                  color: "var(--sp-color-muted)",
-                  fontSize: "0.78rem",
-                  fontWeight: 500,
-                  verticalAlign: "middle",
-                }}
-              >
-                {index + 1}
-              </td>
-              <td
-                style={{
-                  padding: rowPadding,
-                  borderBottom: "1px solid var(--sp-color-border)",
-                  fontSize: "0.86rem",
-                  fontWeight: 600,
-                  verticalAlign: "middle",
-                }}
-              >
-                <OverrideKeyPill value={key} />
-              </td>
-              <td
-                style={{
-                  padding: rowPadding,
-                  borderBottom: "1px solid var(--sp-color-border)",
-                  boxShadow:
-                    "-10px 0 16px -16px color-mix(in oklab, var(--sp-color-text) 54%, transparent)",
-                  fontSize: "0.86rem",
-                  fontWeight: 500,
-                  wordBreak: "break-word",
-                    verticalAlign: "middle",
-                }}
-              >
-                <OverrideValuePill value={value} />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+        <div>Key</div>
+        <div>Value</div>
+      </div>
+      {entries.map(([key, value], index) => (
+        <div
+          key={key}
+          style={{
+            display: "grid",
+            gridTemplateColumns: columnTemplate,
+            gap: 16,
+            alignItems: "center",
+            minWidth: 0,
+            padding: "12px 14px",
+            borderTop: index === 0 ? undefined : "1px solid var(--sp-color-border)",
+          }}
+        >
+          <div style={{ minWidth: 0 }}>
+            <OverrideKeyPill value={key} />
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <OverrideValuePill value={value} />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -856,15 +1009,18 @@ function OverrideCard({
     <article
       className="sp-override-card"
       style={{
-        border: "1px solid var(--sp-color-border)",
+        width: "100%",
+        border: "1px solid var(--sp-card-border)",
         borderRadius: "var(--sp-card-radius)",
-        background: "var(--sp-color-panel)",
-        boxShadow: "var(--sp-shadow-sm)",
+        background: "var(--sp-card-bg)",
+        boxShadow: "var(--sp-card-shadow)",
         display: "grid",
-        gap: 2,
+        gap: 0,
         overflow: "hidden",
-        padding: "10px 14px",
-        transition: "border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease",
+        padding: "0",
+        transition:
+          "border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease",
+        position: "relative",
       }}
     >
       <div
@@ -872,149 +1028,106 @@ function OverrideCard({
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          gap: 12,
-          flexWrap: "wrap",
+          gap: 16,
+          padding: "var(--sp-override-card-padding)",
         }}
       >
-        <div
+        <button
+          type="button"
+          aria-label={`${expanded ? "Collapse" : "Expand"} override details for ${row.id}`}
+          aria-expanded={expanded}
           style={{
             display: "grid",
-            gridTemplateColumns: "36px minmax(0, 1fr)",
+            gridTemplateColumns: "40px minmax(0, 1fr)",
             alignItems: "center",
-            columnGap: 10,
+            columnGap: 16,
             minWidth: 0,
             flex: "1 1 auto",
+            padding: 0,
+            border: 0,
+            background: "transparent",
+            textAlign: "left",
+            cursor: "pointer",
           }}
+          onClick={() => setExpanded((current) => !current)}
         >
           <div
             style={{
-              width: 36,
-              height: 36,
+              width: 40,
+              height: 40,
               display: "inline-flex",
               alignItems: "center",
               justifyContent: "center",
               borderRadius: "var(--sp-control-radius)",
-              background:
-                "color-mix(in oklab, var(--sp-color-primary) 8%, var(--sp-color-panel))",
+              border: "1px solid var(--sp-color-border)",
+              background: "var(--sp-color-surface-muted)",
+              color: expanded ? "var(--sp-color-text)" : "var(--sp-color-muted)",
               flex: "0 0 auto",
+              boxShadow: expanded
+                ? "inset 0 0 0 1px color-mix(in oklab, var(--sp-color-primary) 10%, transparent)"
+                : undefined,
             }}
           >
-            <FilterIcon />
+            {expanded ? <ChevronUpIcon /> : <ChevronDownIcon />}
           </div>
-          <div style={{ display: "grid", gap: 4, minWidth: 0 }}>
-            <div
+          <div style={{ display: "grid", gap: expanded ? 0 : 8, minWidth: 0 }}>
+            <span
               style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                minWidth: 0,
-                flexWrap: "wrap",
+                color: "var(--sp-color-muted)",
+                fontSize: "0.76rem",
+                fontWeight: 700,
+                lineHeight: 1,
+                letterSpacing: "0.05em",
+                textTransform: "uppercase",
               }}
             >
-              <h3
-                style={{
-                  margin: 0,
-                  color: "var(--sp-color-text)",
-                  fontSize: "0.98rem",
-                  fontWeight: 800,
-                  lineHeight: 1.1,
-                  flex: "0 0 auto",
-                }}
-              >
-                Condition
-              </h3>
-              {expanded ? (
-                <div style={{ minWidth: 0, flex: "1 1 auto" }}>
-                  <ConditionSummary entries={conditionEntries} />
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  aria-label={`Expand conditions for ${row.id}`}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    minWidth: 0,
-                    maxWidth: "100%",
-                    padding: 0,
-                    border: 0,
-                    background: "transparent",
-                    cursor: "pointer",
-                    textAlign: "left",
-                    flex: "0 1 auto",
-                  }}
-                  onClick={() => setExpanded(true)}
-                >
-                  <ConditionSummary entries={conditionEntries} />
-                </button>
-              )}
-            </div>
+              Condition
+            </span>
+            {!expanded && (
+              <div style={{ minWidth: 0 }}>
+                <ConditionSummary entries={conditionEntries} />
+              </div>
+            )}
           </div>
-        </div>
+        </button>
         <div
           style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "flex-end",
-            gap: 8,
+            gap: 6,
             flex: "0 0 auto",
+            paddingLeft: 12,
           }}
         >
-            <Tooltip content="View change information">
-              <button
-                type="button"
-                className="sp-button sp-button-secondary"
-                aria-label={`View change information for ${row.id}`}
-                style={{
-                  ...buttonSecondary,
-                  width: 32,
-                  height: 32,
-                  minHeight: 32,
-                  padding: 0,
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderRadius: "var(--sp-control-radius)",
-                  borderColor: "var(--sp-color-border)",
-                  background: "var(--sp-color-panel)",
-                  boxShadow: "none",
-                  cursor: "pointer",
-                  transition: "background 180ms ease, border-color 180ms ease",
-                }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowChangeInfo(true);
-                }}
-              >
-                <ChangeInfoIcon />
-              </button>
-            </Tooltip>
-          {expanded ? (
-            <button
-              type="button"
-              aria-label={`Collapse conditions for ${row.id}`}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                  minHeight: 32,
-                padding: "0 8px",
-                border: 0,
-                background: "transparent",
-                color: "var(--sp-color-primary)",
-                cursor: "pointer",
-                  fontSize: "0.82rem",
-                fontWeight: 800,
+          <BlendTooltip
+            content="View change information"
+            side={TooltipSide.BOTTOM}
+            showArrow
+          >
+            <Button
+              aria-label={`View change information for ${row.id}`}
+              buttonType={ButtonType.SECONDARY}
+              size={ButtonSize.SMALL}
+              subType={ButtonSubType.ICON_ONLY}
+              leadingIcon={<ChangeInfoIcon />}
+              onClick={(e) => {
+                e?.stopPropagation();
+                setShowChangeInfo(true);
               }}
-              onClick={() => setExpanded(false)}
+            />
+          </BlendTooltip>
+          {canEdit && (
+            <BlendTooltip
+              content={
+                canEditRow
+                  ? "Edit override"
+                  : "This override cannot be edited from the current scoped view"
+              }
+              side={TooltipSide.BOTTOM}
+              showArrow
             >
-              Collapse
-              <ChevronUpIcon />
-            </button>
-          ) : (
-            canEdit &&
-            canEditRow && (
-              <Tooltip content="Edit override">
+              <div style={{ opacity: canEditRow ? 1 : 0.6 }}>
                 <Button
                   aria-label={`Edit override ${row.id}`}
                   buttonType={ButtonType.SECONDARY}
@@ -1025,47 +1138,58 @@ function OverrideCard({
                     event?.stopPropagation();
                     onEdit(row);
                   }}
+                  disabled={!canEditRow}
                 />
-              </Tooltip>
-            )
+              </div>
+            </BlendTooltip>
           )}
         </div>
       </div>
 
       {expanded && (
         <section
-          aria-label={`Expanded conditions for ${row.id}`}
+          aria-label={`Expanded override details for ${row.id}`}
           style={{
-            padding: "2px 0 0",
+            display: "grid",
+            gap: 16,
+            padding: "var(--sp-override-card-padding)",
+            borderTop: "1px solid var(--sp-color-border)",
+            background:
+              "color-mix(in oklab, var(--sp-color-surface-muted) 72%, var(--sp-card-bg))",
           }}
         >
           <ReadOnlyConditionRows entries={conditionEntries} />
+          <div style={{ display: "grid", gap: 10 }}>
+            <span
+              style={{
+                color: "var(--sp-color-muted)",
+                fontSize: "0.78rem",
+                fontWeight: 700,
+                lineHeight: 1,
+                letterSpacing: "0.05em",
+                textTransform: "uppercase",
+              }}
+            >
+              Overrides
+            </span>
+            <OverrideValuesTable entries={overrideEntries} />
+          </div>
         </section>
       )}
-
-      <OverrideValuesTable entries={overrideEntries} />
       <Modal
         open={showChangeInfo}
         onClose={() => setShowChangeInfo(false)}
         title="Change Information"
-        width="min(900px, calc(100vw - 32px))"
-        maxWidth="900px"
-        maxHeight="min(86vh, 860px)"
+        width="var(--sp-override-details-modal-width)"
+        maxWidth="var(--sp-override-details-modal-max-width)"
+        maxHeight="var(--sp-override-details-modal-max-height)"
         footer={
-          <button
-            type="button"
-            className="sp-button sp-button-secondary"
-            style={{
-              ...buttonSecondary,
-              minHeight: 42,
-              padding: "0 18px",
-              borderRadius: "var(--sp-control-radius)",
-              fontWeight: 750,
-            }}
+          <Button
+            buttonType={ButtonType.SECONDARY}
+            size={ButtonSize.MEDIUM}
+            text="Close"
             onClick={() => setShowChangeInfo(false)}
-          >
-            Close
-          </button>
+          />
         }
       >
         <div style={{ display: "grid", gap: "var(--sp-space-lg)" }}>
@@ -1083,12 +1207,13 @@ function OverrideCard({
 }
 
 function OverrideManagerContent({
-  pageSize = 20,
+  pageSize = 10,
   defaultConfigPrefix,
 }: OverrideManagerProps) {
   const { overrides, config, scope, defaultConfigs, dimensions } = useSuperposition();
   const { addAlert } = useAlerts();
   const [page, setPage] = useState(1);
+  const [currentPageSize, setCurrentPageSize] = useState(pageSize);
   const [search, setSearch] = useState("");
   const [showEditor, setShowEditor] = useState(false);
   const [editingOverride, setEditingOverride] = useState<ContextOverride | null>(null);
@@ -1102,28 +1227,23 @@ function OverrideManagerContent({
   const hasScopedContext = Boolean(
     scopedContext && Object.keys(scopedContext).length > 0,
   );
-  const canEditContext = config.capabilities?.overrides?.editContext === true;
   const canCreate = canUseFeatureAction(config, "overrides", "create");
   const canEdit = canUseFeatureAction(config, "overrides", "update");
-  const lockDimensions = config.scope?.locked !== false;
-  const lockedDims = lockDimensions ? scope.lockedDimensions : [];
   const defaultConfigPrefixes = useMemo(
     () =>
       normalizeFilterValues(defaultConfigPrefix ?? config.filters?.defaultConfigPrefix),
     [config.filters?.defaultConfigPrefix, defaultConfigPrefix],
   );
-  const dimensionMatchStrategy = hasScopedContext
-    ? config.strict === true
-      ? "exact"
-      : "subset"
-    : undefined;
+  const dimensionMatchStrategy = hasScopedContext ? "non_conflicting" : undefined;
+  const trimmedSearch = search.trim();
+  const hasSearch = Boolean(trimmedSearch);
+  const requestPage = hasSearch ? 1 : page;
 
   const { data, loading, error, refetch } = useApi(
     () =>
       overrides.list(
-        { page, count: pageSize },
+        hasSearch ? { all: true } : { page: requestPage, count: currentPageSize },
         {
-          plaintext: search || undefined,
           prefix: defaultConfigPrefixes,
           dimension: scopedContext,
           dimension_match_strategy: dimensionMatchStrategy,
@@ -1132,11 +1252,11 @@ function OverrideManagerContent({
     [
       defaultConfigPrefixes,
       dimensionMatchStrategy,
+      hasSearch,
       overrides,
-      page,
-      pageSize,
+      requestPage,
+      currentPageSize,
       scopedContext,
-      search,
     ],
   );
 
@@ -1154,16 +1274,46 @@ function OverrideManagerContent({
     if (!data) return [];
     return data.data
       .map((row) => filterOverrideValuesByPrefix(row, defaultConfigPrefixes))
-      .filter((row): row is ContextOverride => Boolean(row));
-  }, [data, defaultConfigPrefixes]);
+      .filter((row): row is ContextOverride => Boolean(row))
+      .filter((row) => matchesOverrideSearch(row, trimmedSearch));
+  }, [data, defaultConfigPrefixes, trimmedSearch]);
 
-  const shouldClientPage = Boolean(data && filteredData.length > pageSize);
+  const shouldClientPage =
+    hasSearch || Boolean(data && filteredData.length > currentPageSize);
+  const serverTotalPages =
+    typeof data?.total_pages === "number" ? data.total_pages : undefined;
+  const serverTotalItems =
+    typeof data?.total_items === "number" ? data.total_items : undefined;
+  const totalPagesFromItems =
+    serverTotalItems !== undefined
+      ? Math.ceil(serverTotalItems / currentPageSize)
+      : undefined;
+  const hasServerPaginationMeta =
+    serverTotalPages !== undefined || serverTotalItems !== undefined;
+  const hasPotentialUnknownNextPage =
+    !shouldClientPage &&
+    !hasSearch &&
+    !hasServerPaginationMeta &&
+    filteredData.length >= currentPageSize;
   const totalPages = shouldClientPage
-    ? Math.ceil(filteredData.length / pageSize)
-    : (data?.total_pages ?? 0);
+    ? Math.max(1, Math.ceil(filteredData.length / currentPageSize))
+    : Math.max(
+        1,
+        serverTotalPages ??
+          totalPagesFromItems ??
+          (hasPotentialUnknownNextPage ? page + 1 : page),
+      );
+  const totalItems = shouldClientPage
+    ? filteredData.length
+    : (serverTotalItems ?? filteredData.length);
+  const paginationTotalItems =
+    shouldClientPage || serverTotalItems !== undefined ? totalItems : undefined;
   const rows = shouldClientPage
-    ? paginateRows(filteredData, page, pageSize)
+    ? paginateRows(filteredData, page, currentPageSize)
     : filteredData;
+  const pageOptions = Array.from(new Set([pageSize, 10, 20, 50])).sort(
+    (left, right) => left - right,
+  );
 
   useEffect(() => {
     if (page > 1 && page > Math.max(1, totalPages)) {
@@ -1189,7 +1339,17 @@ function OverrideManagerContent({
     [defaultConfigOptions],
   );
 
+  const saveMutation = useMutation(
+    useCallback(
+      async (req: PutContextRequest) => {
+        return editingOverride ? overrides.update(req) : overrides.create(req);
+      },
+      [editingOverride, overrides],
+    ),
+  );
+
   const openCreateModal = useCallback(() => {
+    saveMutation.reset();
     setEditingOverride(null);
     setContextEntries([]);
     setOverrideEntries([]);
@@ -1197,29 +1357,11 @@ function OverrideManagerContent({
     setNewReason("");
     setFormSubmitted(false);
     setShowEditor(true);
-  }, []);
-
-  const contextCanBeMutated = useCallback(
-    (context: OverrideContext) => {
-      if (scopedContext) {
-        return contextCanBeEditedInScope(context, scopedContext);
-      }
-
-      return canEdit;
-    },
-    [canEdit, scopedContext],
-  );
+  }, [saveMutation]);
 
   const openEditModal = useCallback(
     (row: ContextOverride) => {
-      if (!contextCanBeMutated(row.value)) {
-        addAlert(
-          "warning",
-          "This override cannot be edited from the current scoped view.",
-        );
-        return;
-      }
-
+      saveMutation.reset();
       setEditingOverride(row);
       setContextEntries([]);
       setOverrideEntries(
@@ -1232,10 +1374,11 @@ function OverrideManagerContent({
       setFormSubmitted(false);
       setShowEditor(true);
     },
-    [addAlert, contextCanBeMutated, defaultConfigByKey],
+    [defaultConfigByKey, saveMutation],
   );
 
   const closeEditor = useCallback(() => {
+    saveMutation.reset();
     setShowEditor(false);
     setEditingOverride(null);
     setContextEntries([]);
@@ -1243,7 +1386,7 @@ function OverrideManagerContent({
     setNewDesc("");
     setNewReason("");
     setFormSubmitted(false);
-  }, []);
+  }, [saveMutation]);
 
   const addContextKey = useCallback(
     (key: string) => {
@@ -1297,8 +1440,7 @@ function OverrideManagerContent({
       ) as PutContextRequest["override"],
     [overrideEntries],
   );
-  const showCreateContextFields =
-    !editingOverride && (!hasScopedContext || canEditContext);
+  const showCreateContextFields = !editingOverride;
   const requiresContextEntries = !editingOverride && !hasScopedContext;
 
   const parsedContext = useMemo(() => {
@@ -1333,15 +1475,6 @@ function OverrideManagerContent({
     return { value: overrideObject, error: null };
   }, [overrideEntries, overrideObject]);
 
-  const saveMutation = useMutation(
-    useCallback(
-      async (req: PutContextRequest) => {
-        return editingOverride ? overrides.update(req) : overrides.create(req);
-      },
-      [editingOverride, overrides],
-    ),
-  );
-
   const handleSave = async () => {
     setFormSubmitted(true);
 
@@ -1361,9 +1494,7 @@ function OverrideManagerContent({
     }
 
     try {
-      const context =
-        editingOverride?.value ??
-        mergeScopedContext(parsedContext.value ?? {}, scopedContext);
+      const context = editingOverride?.value ?? parsedContext.value ?? {};
       await saveMutation.mutate({
         context,
         override: parsedOverride.value as PutContextRequest["override"],
@@ -1380,167 +1511,123 @@ function OverrideManagerContent({
       );
       closeEditor();
       refetch();
-    } catch {
+    } catch (err) {
       addAlert(
         "error",
-        saveMutation.error ||
-        (editingOverride ? "Failed to update override" : "Failed to create override"),
+        formatErrorMessage(
+          err,
+          editingOverride
+            ? "Could not update override. Please try again."
+            : "Could not create override. Please try again.",
+        ),
       );
     }
   };
 
   const hasRows = rows.length > 0;
-  const trimmedSearch = search.trim();
+  const showPagination = Boolean(
+    data &&
+    (hasRows || page > 1) &&
+    (totalPages > 1 || (paginationTotalItems ?? 0) > currentPageSize),
+  );
   const canSave = editingOverride ? canEdit : canCreate;
   const reasonError =
     formSubmitted && !newReason.trim() ? "Enter a reason for this change." : undefined;
   const saveDisabled = !canSave || saveMutation.loading;
   const editorContext = editingOverride?.value ?? scopedContext;
   const editorLockedKeys = editorContext ? Object.keys(editorContext) : [];
-  const showSearch = hasRows || Boolean(trimmedSearch);
-  const renderCreateOverrideAction = () =>
-    canCreate ? (
-      <button
-        className="sp-button sp-button-primary sp-create-override-button"
-        style={{
-          ...buttonPrimary,
-          minHeight: 42,
-          padding: "0 18px",
-          borderColor:
-            "color-mix(in oklab, var(--sp-color-primary) 76%, var(--sp-color-border))",
-        }}
-        onClick={openCreateModal}
-      >
-        {getMessage(config, "overrides.create", "Create override")}
-      </button>
-    ) : undefined;
+  const showSearch = true;
+  const lockedScope = config.scope?.locked === false ? undefined : scope.hostContext;
   const emptyTitle = trimmedSearch ? "No matching overrides" : "No overrides found";
   const emptyDescription = trimmedSearch
     ? "Try a different search term or clear the search field."
     : hasScopedContext
       ? "This scoped context does not have any overrides yet."
       : "Create an override to customize config values for a context.";
+  const overridesSearchAlign = resolveTableSearchAlign(config.table, "overrides");
   const emptyAction = trimmedSearch ? (
-    <button style={buttonSecondary} onClick={() => setSearch("")}>
-      Clear search
-    </button>
+    <Button
+      buttonType={ButtonType.SECONDARY}
+      size={ButtonSize.SMALL}
+      text="Clear search"
+      onClick={() => setSearch("")}
+    />
   ) : undefined;
   const errorDescription = error ? formatErrorMessage(error) : undefined;
+  const hasLockedScope = Boolean(lockedScope && Object.keys(lockedScope).length > 0);
 
   return (
-    <div style={{ display: "grid", gap: "var(--sp-space-lg)" }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          gap: 16,
-          flexWrap: "wrap",
-        }}
-      >
-        <h2
-          style={{
-            margin: "var(--sp-page-title-margin)",
-            fontSize: "var(--sp-page-title-font-size)",
-            lineHeight: 1.12,
-            fontWeight: "var(--sp-page-title-font-weight)",
-            color: "var(--sp-page-title-text)",
-          }}
-        >
-          Overrides
-        </h2>
-        {renderCreateOverrideAction()}
-      </div>
+    <div className="sp-section-stack">
+      <PageHeader
+        title="Overrides"
+        description="Review scoped overrides, then expand a card to inspect its conditions and values."
+      />
 
-      {(!canCreate || hasScopedContext) && (
+      {hasLockedScope ? <LockedScopeMeta scope={lockedScope} /> : null}
+
+      {!canCreate && (config.readOnly || hasScopedContext) && (
         <div style={{ display: "grid", gap: 10 }}>
-          {!canCreate && (config.readOnly || hasScopedContext) && (
-            <div
-              style={{
-                padding: "var(--sp-banner-padding)",
-                borderRadius: "var(--sp-banner-radius)",
-                background: "var(--sp-banner-bg)",
-                border: "1px solid var(--sp-banner-border)",
-                color: "var(--sp-banner-text)",
-                fontSize: "var(--sp-banner-font-size)",
-                fontWeight: "var(--sp-banner-font-weight)",
-              }}
-            >
-              {getMessage(config, "common.readOnly", "Read-only mode")}
-            </div>
-          )}
-          {hasScopedContext && scopedContext && (
-            <div
-              style={{
-                padding: "var(--sp-banner-padding)",
-                borderRadius: "var(--sp-banner-radius)",
-                background: "var(--sp-banner-bg)",
-                border: "1px solid var(--sp-banner-border)",
-                color: "var(--sp-banner-text)",
-                fontSize: "var(--sp-banner-font-size)",
-                fontWeight: "var(--sp-banner-font-weight)",
-                display: "grid",
-                gap: 8,
-              }}
-            >
-              <div style={{ fontWeight: 700 }}>
-                {getMessage(config, "common.fixedScope", "Fixed Scope")}
-              </div>
-              <ConditionBadges condition={scopedContext} lockedKeys={lockedDims} />
-            </div>
-          )}
-        </div>
-      )}
-
-      {showSearch && (
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: 12,
-            flexWrap: "wrap",
-          }}
-        >
-          <SearchField
-            placeholder="Search overrides"
-            value={search}
-            onChange={(nextSearch) => {
-              setSearch(nextSearch);
-              setPage(1);
-            }}
+          <InlineNotice
+            title={getMessage(config, "common.readOnly", "Read-only mode")}
+            description="Mutation actions are disabled for this embed."
+            tone="warning"
           />
         </div>
       )}
 
+      {showSearch && (
+        <Toolbar>
+          <div
+            className="sp-overrides-search-row"
+            style={{
+              ...searchAlignStyle(overridesSearchAlign),
+              flex: "1 1 320px",
+              minWidth: "min(100%, 280px)",
+            }}
+          >
+            <SearchField
+              placeholder="Search overrides"
+              value={search}
+              onChange={(nextSearch) => {
+                setSearch(nextSearch);
+                setPage(1);
+              }}
+            />
+          </div>
+          {canCreate ? (
+            <div>
+              <Button
+                buttonType={ButtonType.PRIMARY}
+                size={ButtonSize.MEDIUM}
+                text={getMessage(config, "overrides.create", "Create override")}
+                leadingIcon={<Plus aria-hidden="true" size={16} />}
+                onClick={openCreateModal}
+              />
+            </div>
+          ) : null}
+        </Toolbar>
+      )}
+
       {error && hasRows && (
-        <div
-          style={{
-            padding: "10px 12px",
-            borderRadius: "var(--sp-inline-radius)",
-            background: "var(--sp-feedback-danger-bg)",
-            border: "1px solid var(--sp-feedback-danger-border)",
-            color: "var(--sp-feedback-danger-text)",
-            fontSize: 13,
-          }}
-        >
-          Failed to load overrides: {error}
-        </div>
+        <InlineNotice
+          title="Could not load overrides"
+          description={formatErrorMessage(error)}
+          tone="danger"
+        />
       )}
 
       {loading ? (
-        <div
-          style={{
-            padding: "calc(var(--sp-space-lg) * 2)",
-            textAlign: "center",
-            color: "var(--sp-color-muted)",
-            border: "1px solid var(--sp-color-border)",
-            borderRadius: "var(--sp-card-radius)",
-            background: "var(--sp-color-panel)",
-          }}
-        >
-          Loading...
-        </div>
+        <Surface>
+          <div
+            style={{
+              padding: "calc(var(--sp-space-lg) * 2)",
+              textAlign: "center",
+              color: "var(--sp-color-muted)",
+            }}
+          >
+            Loading...
+          </div>
+        </Surface>
       ) : error ? (
         <EmptyState
           title="Could not load overrides"
@@ -1549,13 +1636,13 @@ function OverrideManagerContent({
           minHeight="var(--sp-table-empty-min-height)"
         />
       ) : hasRows ? (
-        <div style={{ display: "grid", gap: "var(--sp-space-md)" }}>
+        <div style={{ display: "grid", gap: "var(--sp-override-list-gap)" }}>
           {rows.map((row) => (
             <OverrideCard
               key={row.id}
               row={row}
               canEdit={canEdit}
-              canEditRow={contextCanBeMutated(row.value)}
+              canEditRow={canEdit}
               onEdit={openEditModal}
             />
           ))}
@@ -1569,159 +1656,220 @@ function OverrideManagerContent({
         />
       )}
 
-      {data && hasRows && totalPages > 1 && (
-        <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
+      {showPagination && (
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          totalItems={paginationTotalItems}
+          rowsPerPage={currentPageSize}
+          onRowsPerPageChange={(nextRowsPerPage) => {
+            setCurrentPageSize(nextRowsPerPage);
+            setPage(1);
+          }}
+          rowsPerPageOptions={pageOptions}
+          showSinglePage
+          onPageChange={setPage}
+        />
       )}
 
       <Modal
         open={showEditor}
         onClose={closeEditor}
         title={editingOverride ? "Edit Overrides" : "Create Overrides"}
+        width="var(--sp-override-editor-modal-width)"
+        maxWidth="var(--sp-override-editor-modal-max-width)"
+        maxHeight="var(--sp-override-editor-modal-max-height)"
         footer={
           <>
-            <button style={buttonSecondary} onClick={closeEditor}>
-              Cancel
-            </button>
-            <button
-              className="sp-button sp-button-primary"
-              style={buttonPrimary}
+            <Button
+              buttonType={ButtonType.SECONDARY}
+              size={ButtonSize.MEDIUM}
+              text="Cancel"
+              onClick={closeEditor}
+            />
+            <Button
+              buttonType={ButtonType.PRIMARY}
+              size={ButtonSize.MEDIUM}
+              text={
+                saveMutation.loading
+                  ? editingOverride
+                    ? "Saving..."
+                    : "Creating..."
+                  : editingOverride
+                    ? "Save"
+                    : "Create"
+              }
               onClick={handleSave}
               disabled={saveDisabled}
-            >
-              {saveMutation.loading
-                ? editingOverride
-                  ? "Saving..."
-                  : "Creating..."
-                : editingOverride
-                  ? "Save"
-                  : "Create"}
-            </button>
+              loading={saveMutation.loading}
+            />
           </>
         }
       >
-        <StructuredContextOverrideForm
-          contextEntries={contextEntries}
-          overrideEntries={overrideEntries}
-          dimensions={dimensionOptions}
-          defaultConfigs={defaultConfigOptions}
-          lockedScope={editorContext}
-          lockedKeys={editingOverride ? editorLockedKeys : lockedDims}
-          showContextFields={showCreateContextFields}
-          showOverrideFields={false}
-          showValidationErrors={formSubmitted}
-          canAddContext={canCreate}
-          canRemoveContext={canCreate}
-          canAddOverride={canCreate}
-          canRemoveOverride={canCreate}
-          onAddContextKey={addContextKey}
-          onUpdateContextEntry={updateContextEntry}
-          onRemoveContextKey={removeContextKey}
-          onAddOverrideKey={(key) => {
-            const configItem = defaultConfigOptions.find((item) => item.key === key);
-            if (!configItem) return;
-            setOverrideEntries((current) => [
-              ...current,
-              defaultEntryFromSchema(key, configItem.schema),
-            ]);
-          }}
-          onUpdateOverrideEntry={updateOverrideEntry}
-          onRemoveOverrideKey={(key) =>
-            setOverrideEntries((current) => current.filter((entry) => entry.key !== key))
-          }
-        />
-        {formSubmitted && parsedContext.error && (
-          <div
-            style={{
-              marginTop: -6,
-              padding: "10px 12px",
-              borderRadius: "var(--sp-inline-radius)",
-              background: "var(--sp-feedback-danger-bg)",
-              border: "1px solid var(--sp-feedback-danger-border)",
-              color: "var(--sp-feedback-danger-text)",
-              fontSize: 13,
-            }}
-          >
-            {parsedContext.error}
-          </div>
-        )}
-        <div style={{ paddingTop: "var(--sp-space-sm)" }}>
-          <FormField label="Description">
-            <textarea
-              style={{ ...inputStyle, minHeight: 82, resize: "vertical" }}
-              value={newDesc}
-              onChange={(e) => setNewDesc(e.target.value)}
-              placeholder="Enter a description"
+        {editingOverride ? (
+          <div style={{ display: "grid", gap: 24 }}>
+            {editorContext && <FixedScopeSection scope={editorContext} />}
+            <FormField label="Description">
+              <textarea
+                style={{ ...inputStyle, minHeight: 136, resize: "vertical" }}
+                value={newDesc}
+                onChange={(e) => setNewDesc(e.target.value)}
+                placeholder="Enter a description"
+              />
+            </FormField>
+            <FormField label="Reason for Change" required error={reasonError}>
+              <textarea
+                style={{ ...inputStyle, minHeight: 136, resize: "vertical" }}
+                value={newReason}
+                onChange={(e) => setNewReason(e.target.value)}
+                placeholder="Enter a reason for this change"
+              />
+            </FormField>
+            <StructuredContextOverrideForm
+              contextEntries={contextEntries}
+              overrideEntries={overrideEntries}
+              dimensions={dimensionOptions}
+              defaultConfigs={defaultConfigOptions}
+              lockedScope={editorContext}
+              lockedKeys={editorLockedKeys}
+              showContextFields={false}
+              showOverrideFields
+              showLockedScope={false}
+              showValidationErrors={formSubmitted}
+              canAddContext={canSave}
+              canRemoveContext={canSave}
+              canAddOverride={canSave}
+              canRemoveOverride={canSave}
+              variant="modal"
+              onAddContextKey={addContextKey}
+              onUpdateContextEntry={updateContextEntry}
+              onRemoveContextKey={removeContextKey}
+              onAddOverrideKey={(key) => {
+                const configItem = defaultConfigOptions.find((item) => item.key === key);
+                if (!configItem) return;
+                setOverrideEntries((current) => [
+                  ...current,
+                  defaultEntryFromSchema(key, configItem.schema),
+                ]);
+              }}
+              onUpdateOverrideEntry={updateOverrideEntry}
+              onRemoveOverrideKey={(key) =>
+                setOverrideEntries((current) =>
+                  current.filter((entry) => entry.key !== key),
+                )
+              }
             />
-          </FormField>
-        </div>
-        <FormField label="Reason for Change" required error={reasonError}>
-          <textarea
-            style={{ ...inputStyle, minHeight: 82, resize: "vertical" }}
-            value={newReason}
-            onChange={(e) => setNewReason(e.target.value)}
-            placeholder="Enter a reason for this change"
-          />
-        </FormField>
-        <StructuredContextOverrideForm
-          contextEntries={contextEntries}
-          overrideEntries={overrideEntries}
-          dimensions={dimensionOptions}
-          defaultConfigs={defaultConfigOptions}
-          lockedScope={editorContext}
-          lockedKeys={editingOverride ? editorLockedKeys : lockedDims}
-          showContextFields={false}
-          showOverrideFields
-          showLockedScope={false}
-          showValidationErrors={formSubmitted}
-          canAddContext={canSave}
-          canRemoveContext={canSave}
-          canAddOverride={canSave}
-          canRemoveOverride={canSave}
-          onAddContextKey={addContextKey}
-          onUpdateContextEntry={updateContextEntry}
-          onRemoveContextKey={removeContextKey}
-          onAddOverrideKey={(key) => {
-            const configItem = defaultConfigOptions.find((item) => item.key === key);
-            if (!configItem) return;
-            setOverrideEntries((current) => [
-              ...current,
-              defaultEntryFromSchema(key, configItem.schema),
-            ]);
-          }}
-          onUpdateOverrideEntry={updateOverrideEntry}
-          onRemoveOverrideKey={(key) =>
-            setOverrideEntries((current) => current.filter((entry) => entry.key !== key))
-          }
-        />
-        {formSubmitted && parsedOverride.error && (
-          <div
-            style={{
-              marginTop: -6,
-              padding: "10px 12px",
-              borderRadius: "var(--sp-inline-radius)",
-              background: "var(--sp-feedback-danger-bg)",
-              border: "1px solid var(--sp-feedback-danger-border)",
-              color: "var(--sp-feedback-danger-text)",
-              fontSize: 13,
-            }}
-          >
-            {parsedOverride.error}
+            {formSubmitted && parsedOverride.error && (
+              <InlineNotice
+                title="Override values need attention"
+                description={parsedOverride.error}
+                tone="danger"
+              />
+            )}
+            {saveMutation.error && (
+              <InlineNotice
+                title="Could not save override"
+                description={saveMutation.error}
+                tone="danger"
+              />
+            )}
           </div>
-        )}
-        {saveMutation.error && (
-          <div
-            style={{
-              marginTop: 4,
-              padding: "10px 12px",
-              borderRadius: "var(--sp-inline-radius)",
-              background: "var(--sp-feedback-danger-bg)",
-              border: "1px solid var(--sp-feedback-danger-border)",
-              color: "var(--sp-feedback-danger-text)",
-              fontSize: 13,
-            }}
-          >
-            {saveMutation.error}
-          </div>
+        ) : (
+          <>
+            <StructuredContextOverrideForm
+              contextEntries={contextEntries}
+              overrideEntries={overrideEntries}
+              dimensions={dimensionOptions}
+              defaultConfigs={defaultConfigOptions}
+              lockedScope={undefined}
+              lockedKeys={[]}
+              showLockedScope={false}
+              showContextFields={showCreateContextFields}
+              showOverrideFields={false}
+              showValidationErrors={formSubmitted}
+              canAddContext={canCreate}
+              canRemoveContext={canCreate}
+              canAddOverride={canCreate}
+              canRemoveOverride={canCreate}
+              onAddContextKey={addContextKey}
+              onUpdateContextEntry={updateContextEntry}
+              onRemoveContextKey={removeContextKey}
+              onAddOverrideKey={(key) => {
+                const configItem = defaultConfigOptions.find((item) => item.key === key);
+                if (!configItem) return;
+                setOverrideEntries((current) => [
+                  ...current,
+                  defaultEntryFromSchema(key, configItem.schema),
+                ]);
+              }}
+              onUpdateOverrideEntry={updateOverrideEntry}
+              onRemoveOverrideKey={(key) =>
+                setOverrideEntries((current) =>
+                  current.filter((entry) => entry.key !== key),
+                )
+              }
+            />
+            <div style={{ paddingTop: "var(--sp-space-sm)" }}>
+              <FormField label="Description">
+                <textarea
+                  style={{ ...inputStyle, minHeight: 82, resize: "vertical" }}
+                  value={newDesc}
+                  onChange={(e) => setNewDesc(e.target.value)}
+                  placeholder="Enter a description"
+                />
+              </FormField>
+            </div>
+            <FormField label="Reason for Change" required error={reasonError}>
+              <textarea
+                style={{ ...inputStyle, minHeight: 82, resize: "vertical" }}
+                value={newReason}
+                onChange={(e) => setNewReason(e.target.value)}
+                placeholder="Enter a reason for this change"
+              />
+            </FormField>
+            <StructuredContextOverrideForm
+              contextEntries={contextEntries}
+              overrideEntries={overrideEntries}
+              dimensions={dimensionOptions}
+              defaultConfigs={defaultConfigOptions}
+              lockedScope={undefined}
+              lockedKeys={[]}
+              showContextFields={false}
+              showOverrideFields
+              showLockedScope={false}
+              showValidationErrors={formSubmitted}
+              canAddContext={canSave}
+              canRemoveContext={canSave}
+              canAddOverride={canSave}
+              canRemoveOverride={canSave}
+              onAddContextKey={addContextKey}
+              onUpdateContextEntry={updateContextEntry}
+              onRemoveContextKey={removeContextKey}
+              onAddOverrideKey={(key) => {
+                const configItem = defaultConfigOptions.find((item) => item.key === key);
+                if (!configItem) return;
+                setOverrideEntries((current) => [
+                  ...current,
+                  defaultEntryFromSchema(key, configItem.schema),
+                ]);
+              }}
+              onUpdateOverrideEntry={updateOverrideEntry}
+              onRemoveOverrideKey={(key) =>
+                setOverrideEntries((current) =>
+                  current.filter((entry) => entry.key !== key),
+                )
+              }
+            />
+            {saveMutation.error && (
+              <div style={{ paddingTop: "var(--sp-space-md)" }}>
+                <InlineNotice
+                  title="Could not save override"
+                  description={saveMutation.error}
+                  tone="danger"
+                />
+              </div>
+            )}
+          </>
         )}
       </Modal>
     </div>

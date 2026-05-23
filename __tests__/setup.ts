@@ -25,3 +25,34 @@ Object.defineProperty(window, "ResizeObserver", {
   configurable: true,
   writable: true,
 });
+
+const matchMediaMock =
+  window.matchMedia ??
+  ((query: string): MediaQueryList => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => false,
+  }));
+
+Object.defineProperty(globalThis, "matchMedia", {
+  value: matchMediaMock,
+  configurable: true,
+  writable: true,
+});
+
+Object.defineProperty(window, "matchMedia", {
+  value: matchMediaMock,
+  configurable: true,
+  writable: true,
+});
+
+Object.defineProperty(window, "scrollTo", {
+  value: () => {},
+  configurable: true,
+  writable: true,
+});

@@ -1,3 +1,4 @@
+import "../src/blend-react-compat";
 import {
   Theme as BlendTheme,
   ThemeProvider as BlendThemeProvider,
@@ -9,7 +10,8 @@ import {
 } from "@juspay/blend-design-system";
 import React, { useEffect, useMemo, useState } from "react";
 import ReactDOM from "react-dom/client";
-import { AlertProvider, SuperpositionAdmin, SuperpositionUIProvider } from "../src/index";
+import { AlertProvider, AuditTrail, SuperpositionUIProvider } from "../src/index";
+import { ConfigManager, DimensionManager, OverrideManager } from "../src/pages";
 import "../src/styles.css";
 import type {
   JsonValue,
@@ -112,11 +114,44 @@ const demoNotesStyle: React.CSSProperties = {
 };
 
 const demoAppRootStyle: React.CSSProperties = {
+  maxWidth: "min(1540px, calc(100vw - 48px))",
+  height: "auto",
+  maxHeight: "none",
+  minHeight: 720,
+  padding: 0,
   background: "transparent",
   border: 0,
   borderRadius: 0,
   boxShadow: "none",
+  overflow: "visible",
 };
+
+const demoFeatureNavItems: Array<{
+  feature: SuperpositionFeature;
+  label: string;
+  description: string;
+}> = [
+  {
+    feature: "config",
+    label: "Default Configs",
+    description: "Default values and schemas",
+  },
+  {
+    feature: "overrides",
+    label: "Overrides",
+    description: "Scoped configuration changes",
+  },
+  {
+    feature: "dimensions",
+    label: "Dimensions",
+    description: "Context dimensions",
+  },
+  {
+    feature: "audit",
+    label: "Audit Trail",
+    description: "Configuration change history",
+  },
+];
 
 function buildDemoFoundationTokens(state: DemoDraftState): BlendThemeType {
   return {
@@ -247,8 +282,8 @@ function normalizeDemoDraft(
     strict: Boolean(value?.strict),
     themeMode:
       base?.themeMode === "light" ||
-        base?.themeMode === "dark" ||
-        base?.themeMode === "system"
+      base?.themeMode === "dark" ||
+      base?.themeMode === "system"
         ? base.themeMode
         : DEFAULT_DRAFT.themeMode,
     themePrimary:
@@ -386,13 +421,21 @@ function buildConfig(
     orgId: state.orgId,
     workspace: state.workspace,
     auth: state.token ? { mode: "bearer", token: state.token } : undefined,
-    capabilities: state.allowOverrideContextEditing
-      ? {
-        overrides: {
-          editContext: true,
-        },
-      }
-      : undefined,
+    capabilities: {
+      config: {
+        delete: false,
+      },
+      dimensions: {
+        delete: false,
+      },
+      ...(state.allowOverrideContextEditing
+        ? {
+            overrides: {
+              editContext: true,
+            },
+          }
+        : {}),
+    },
     scope: {
       context: parseOptionalJsonObject(state.scopeJson),
       locked: state.scopeLocked,
@@ -412,10 +455,142 @@ function buildConfig(
       mode: "external",
       currentFeature: feature,
       initialFeature: feature,
-      onNavigate: () => { },
+      onNavigate: () => {},
       getFeatureHref: () => "",
     },
   };
+}
+
+function DemoFeatureContent({ feature }: { feature: SuperpositionFeature }) {
+  switch (feature) {
+    case "config":
+      return <ConfigManager editable />;
+    case "overrides":
+      return <OverrideManager />;
+    case "dimensions":
+      return <DimensionManager editable />;
+    case "audit":
+      return <AuditTrail />;
+    default:
+      return null;
+  }
+}
+
+function DemoFeatureShell({
+  activeFeature,
+  onNavigate,
+}: {
+  activeFeature: SuperpositionFeature;
+  onNavigate: (feature: SuperpositionFeature) => void;
+}) {
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "260px minmax(0, 1fr)",
+        minHeight: 720,
+        background: "transparent",
+      }}
+    >
+      <aside
+        aria-label="Demo feature navigation"
+        style={{
+          display: "grid",
+          gridTemplateRows: "auto 1fr",
+          gap: 18,
+          padding: 18,
+          background: String(BLEND_COLORS.gray[0]),
+        }}
+      >
+        <div style={{ display: "grid", gap: 4 }}>
+          <div
+            style={{
+              color: String(BLEND_COLORS.gray[900]),
+              fontSize: 15,
+              fontWeight: BLEND_FONT.weight[700],
+              lineHeight: 1.2,
+            }}
+          >
+            Component demo
+          </div>
+          <p
+            style={{
+              margin: 0,
+              color: String(BLEND_COLORS.gray[500]),
+              fontSize: 12,
+              lineHeight: 1.4,
+            }}
+          >
+            Render each embeddable feature independently.
+          </p>
+        </div>
+
+        <nav style={{ display: "grid", alignContent: "start", gap: 6 }}>
+          {demoFeatureNavItems.map((item) => {
+            const isActive = item.feature === activeFeature;
+
+            return (
+              <button
+                key={item.feature}
+                type="button"
+                aria-current={isActive ? "page" : undefined}
+                onClick={() => onNavigate(item.feature)}
+                style={{
+                  width: "100%",
+                  display: "grid",
+                  gap: 3,
+                  padding: "11px 12px",
+                  border: `1px solid ${
+                    isActive ? BLEND_COLORS.primary[200] : "transparent"
+                  }`,
+                  borderRadius: String(BLEND_RADIUS[8]),
+                  background: isActive ? String(BLEND_COLORS.primary[50]) : "transparent",
+                  color: isActive
+                    ? String(BLEND_COLORS.primary[700])
+                    : String(BLEND_COLORS.gray[700]),
+                  cursor: "pointer",
+                  textAlign: "left",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 14,
+                    fontWeight: BLEND_FONT.weight[700],
+                    lineHeight: 1.25,
+                  }}
+                >
+                  {item.label}
+                </span>
+                <span
+                  style={{
+                    color: isActive
+                      ? String(BLEND_COLORS.primary[600])
+                      : String(BLEND_COLORS.gray[500]),
+                    fontSize: 12,
+                    fontWeight: BLEND_FONT.weight[500],
+                    lineHeight: 1.35,
+                  }}
+                >
+                  {item.description}
+                </span>
+              </button>
+            );
+          })}
+        </nav>
+      </aside>
+
+      <main
+        style={{
+          minWidth: 0,
+          overflow: "visible",
+          padding: 24,
+          background: String(BLEND_COLORS.gray[50]),
+        }}
+      >
+        <DemoFeatureContent feature={activeFeature} />
+      </main>
+    </div>
+  );
 }
 
 function DemoApp() {
@@ -497,19 +672,19 @@ function DemoApp() {
           ...baseConfig,
           routing: routing
             ? {
-              ...routing,
-              currentFeature: activeFeature,
-              initialFeature: activeFeature,
-              onNavigate: (feature) => {
-                setActiveFeature(feature);
-                writeFeatureToUrl(feature);
-              },
-              getFeatureHref: (feature) => {
-                const url = new URL(window.location.href);
-                url.searchParams.set("feature", feature);
-                return url.pathname + url.search;
-              },
-            }
+                ...routing,
+                currentFeature: activeFeature,
+                initialFeature: activeFeature,
+                onNavigate: (feature) => {
+                  setActiveFeature(feature);
+                  writeFeatureToUrl(feature);
+                },
+                getFeatureHref: (feature) => {
+                  const url = new URL(window.location.href);
+                  url.searchParams.set("feature", feature);
+                  return url.pathname + url.search;
+                },
+              }
             : undefined,
         },
         error: null,
@@ -892,7 +1067,13 @@ function DemoApp() {
         {config ? (
           <SuperpositionUIProvider config={config}>
             <AlertProvider>
-              <SuperpositionAdmin />
+              <DemoFeatureShell
+                activeFeature={activeFeature}
+                onNavigate={(feature) => {
+                  setActiveFeature(feature);
+                  writeFeatureToUrl(feature);
+                }}
+              />
             </AlertProvider>
           </SuperpositionUIProvider>
         ) : (

@@ -7,10 +7,15 @@ export interface TooltipProps {
 
 export function Tooltip({ content, children }: TooltipProps) {
   const tooltipId = useId();
+  const childDescribedBy = children.props["aria-describedby"];
+  const describedBy = [childDescribedBy, tooltipId].filter(Boolean).join(" ");
+  const child = React.cloneElement(children, {
+    "aria-describedby": describedBy,
+  });
 
   return (
-    <div className="sp-tooltip" aria-describedby={tooltipId} style={{ display: "inline-flex" }}>
-      {children}
+    <div className="sp-tooltip" style={{ display: "inline-flex" }}>
+      {child}
       <span id={tooltipId} role="tooltip" className="sp-tooltip__bubble">
         {content}
       </span>

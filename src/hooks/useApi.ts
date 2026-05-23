@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { formatErrorMessage } from "../utils/errors";
 
 export interface UseApiState<T> {
   data: T | null;
@@ -35,7 +36,7 @@ export function useApi<T>(
         setState({
           data: null,
           loading: false,
-          error: err instanceof Error ? err.message : String(err),
+          error: formatErrorMessage(err),
         }),
       );
   }, []);
@@ -57,9 +58,15 @@ export function useMutation<TArgs extends unknown[], TResult>(
   mutate: (...args: TArgs) => Promise<TResult>;
   loading: boolean;
   error: string | null;
+  reset: () => void;
 } {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const reset = useCallback(() => {
+    setLoading(false);
+    setError(null);
+  }, []);
 
   const mutate = useCallback(
     async (...args: TArgs): Promise<TResult> => {
@@ -69,8 +76,7 @@ export function useMutation<TArgs extends unknown[], TResult>(
         const result = await mutationFn(...args);
         return result;
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        setError(msg);
+        setError(formatErrorMessage(err));
         throw err;
       } finally {
         setLoading(false);
@@ -79,5 +85,5 @@ export function useMutation<TArgs extends unknown[], TResult>(
     [mutationFn],
   );
 
-  return { mutate, loading, error };
+  return { mutate, loading, error, reset };
 }

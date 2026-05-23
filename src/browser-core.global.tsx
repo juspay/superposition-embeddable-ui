@@ -1,3 +1,5 @@
+import "./blend-react-compat";
+
 import type { ComponentType } from "react";
 import {
   createTagName,
@@ -35,7 +37,10 @@ const featureTagSuffixes: Record<FeatureName, string> = {
 export const customElementTagNames: Record<FeatureName, string> = {
   admin: createTagName("superposition", featureTagSuffixes.admin),
   "config-manager": createTagName("superposition", featureTagSuffixes["config-manager"]),
-  "override-manager": createTagName("superposition", featureTagSuffixes["override-manager"]),
+  "override-manager": createTagName(
+    "superposition",
+    featureTagSuffixes["override-manager"],
+  ),
   "dimension-manager": createTagName(
     "superposition",
     featureTagSuffixes["dimension-manager"],
@@ -77,7 +82,4 @@ export function defineCustomElements(prefix = "superposition") {
   return tagMap;
 }
 
-export {
-  registerSuperpositionHostAdapters,
-  unregisterSuperpositionHostAdapters
-};
+export { registerSuperpositionHostAdapters, unregisterSuperpositionHostAdapters };

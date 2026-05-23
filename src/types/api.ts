@@ -1,23 +1,24 @@
 import type {
-    AuditLogFull,
-    ContextFilterSortOn,
-    ContextPut,
-    ContextResponse,
-    CreateDefaultConfigInput,
-    CreateDimensionInput,
-    DefaultConfigResponse,
-    DimensionMatchStrategy,
-    DimensionResponse,
-    DimensionType,
-    GetResolvedConfigOutput,
-    ListAuditLogsInput,
-    ListContextsInput,
-    ListContextsOutput,
-    ListDefaultConfigsInput,
-    AuditAction as SmithyAuditAction,
-    SortBy,
-    UpdateDefaultConfigInput,
-    UpdateDimensionInput,
+  AuditLogFull,
+  ContextFilterSortOn,
+  ContextPut,
+  ContextResponse,
+  CreateDefaultConfigInput,
+  CreateDimensionInput,
+  DefaultConfigResponse,
+  DimensionMatchStrategy,
+  DimensionResponse,
+  DimensionType,
+  GetResolvedConfigOutput,
+  ListAuditLogsInput,
+  ListContextsInput,
+  ListContextsOutput,
+  ListDefaultConfigsInput,
+  MergeStrategy,
+  AuditAction as SmithyAuditAction,
+  SortBy,
+  UpdateDefaultConfigInput,
+  UpdateDimensionInput,
 } from "superposition-sdk";
 
 type ServiceContextKeys = "workspace_id" | "org_id";
@@ -33,13 +34,8 @@ type OptionalFunctionKeys =
   | "value_validation_function_name"
   | "value_compute_function_name";
 
-type RawResponse<
-  T,
-  OptionalKeys extends keyof T = never,
-> = {
-  [Key in Exclude<keyof T, OptionalKeys>]-?: Key extends
-    | "created_at"
-    | "last_modified_at"
+type RawResponse<T, OptionalKeys extends keyof T = never> = {
+  [Key in Exclude<keyof T, OptionalKeys>]-?: Key extends "created_at" | "last_modified_at"
     ? ApiTimestamp
     : Defined<T[Key]>;
 } & {
@@ -53,13 +49,16 @@ export type Condition = Defined<ContextPut["context"]>;
 export type Overrides = Defined<ContextPut["override"]>;
 export type DependencyGraph = Defined<DimensionResponse["dependency_graph"]>;
 
-export type { SortBy };
+export type { MergeStrategy, SortBy };
 
 // ── Audit Logs ─────────────────────────────────────────────────────
 
 export type AuditAction = SmithyAuditAction;
 export type AuditLog = RawResponse<AuditLogFull, "original_data" | "new_data">;
-export type AuditLogListFilters = Omit<RequestBody<ListAuditLogsInput>, keyof PaginationParams>;
+export type AuditLogListFilters = Omit<
+  RequestBody<ListAuditLogsInput>,
+  keyof PaginationParams
+>;
 
 // ── Pagination ─────────────────────────────────────────────────────
 
@@ -101,13 +100,16 @@ export type ContextOverride = Omit<RawResponse<ContextResponse>, "override"> & {
 };
 
 export type PutContextRequest = ContextPut;
+export type ContextDimensionMatchStrategy =
+  | Extract<DimensionMatchStrategy, string>
+  | "non_conflicting";
 
 export type ContextListFilters = Pick<
   ListContextsInput,
   "prefix" | "sort_by" | "created_by" | "last_modified_by" | "plaintext"
 > & {
   dimension?: Condition;
-  dimension_match_strategy?: DimensionMatchStrategy;
+  dimension_match_strategy?: ContextDimensionMatchStrategy;
   sort_on?: ContextFilterSortOn;
 };
 
@@ -123,3 +125,16 @@ export interface Config {
 }
 
 export type ResolvedConfigResponse = GetResolvedConfigOutput;
+
+export interface ResolvedConfigExplanationTimelineItem {
+  context_id: string;
+  condition: JsonValue;
+  override_id: string;
+  value_before: JsonValue;
+  value_after: JsonValue;
+}
+
+export interface ResolvedConfigExplanation {
+  key: string;
+  timeline: ResolvedConfigExplanationTimelineItem[];
+}

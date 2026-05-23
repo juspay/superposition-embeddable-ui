@@ -1,3 +1,5 @@
+import "./blend-react-compat";
+
 import React from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { AlertProvider, SuperpositionUIProvider } from "./providers";
@@ -102,9 +104,9 @@ function parseConfigValue(element: HTMLElement): SuperpositionEmbeddableConfig |
     },
     theme: themeMode
       ? {
-        ...(typeof parsedConfig.theme === "object" ? parsedConfig.theme : {}),
-        mode: themeMode as "light" | "dark" | "system",
-      }
+          ...(typeof parsedConfig.theme === "object" ? parsedConfig.theme : {}),
+          mode: themeMode as "light" | "dark" | "system",
+        }
       : parsedConfig.theme,
   } as SuperpositionEmbeddableConfig;
 }

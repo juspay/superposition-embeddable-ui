@@ -1,25 +1,41 @@
-import { useCallback, useMemo, useState } from "react";
 import {
-  buttonDanger,
-  buttonPrimary,
-  buttonSecondary,
+  Tooltip as BlendTooltip,
+  Button,
+  ButtonSize,
+  ButtonSubType,
+  ButtonType,
+  Tag,
+  TagColor,
+  TagShape,
+  TagSize,
+  TagVariant,
+  TooltipSide,
+} from "@juspay/blend-design-system";
+import { Download, Plus, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import "../blend-react-compat";
+import {
   FormField,
+  InlineNotice,
   inputStyle,
   Modal,
-  Pagination,
-  resolveTableSerialNumberProps,
+  PageHeader,
+  resolveTableSearchAlign,
   Table,
 } from "../components";
-import type { Column } from "../components/Table";
 import { useApi, useMutation } from "../hooks/useApi";
 import { useAlerts } from "../providers/AlertProvider";
 import { useSuperposition } from "../providers/SuperpositionUIProvider";
 import type { CreateDimensionRequest, Dimension } from "../types";
 import { normalizeFilterValues, paginateRows } from "../utils";
+import { formatErrorMessage } from "../utils/errors";
+import { DimensionDetailPage } from "./DimensionDetailPage";
 import {
   canUseFeatureAction,
   FeatureUnavailable,
   getMessage,
+  isFeatureDetailPageEnabled,
+  isFeatureEditable,
   isFeatureEnabled,
 } from "./FeatureGate";
 
@@ -27,6 +43,8 @@ export interface DimensionManagerProps {
   pageSize?: number;
   /** Allow create/delete controls for dimensions. Defaults to view-only. */
   editable?: boolean;
+  /** Allow clicking a row to open the single dimension detail page. Defaults to enabled. */
+  enableDetailPage?: boolean;
 }
 
 function filterDimensions(rows: Dimension[], allowedDimensions?: string[]): Dimension[] {
@@ -35,45 +53,52 @@ function filterDimensions(rows: Dimension[], allowedDimensions?: string[]): Dime
   return rows.filter((row) => allowed.has(row.dimension));
 }
 
-function formatDimensionType(dt: Dimension["dimension_type"]): string {
-  if (typeof dt === "string") {
-    return dt;
-  }
+function matchesDimensionSearch(row: Dimension, searchTerm: string): boolean {
+  const query = searchTerm.trim().toLowerCase();
+  if (!query) return true;
 
-  if ("REGULAR" in dt) {
-    return "REGULAR";
-  }
+  return [row.dimension, String(row.position), row.description]
+    .filter(Boolean)
+    .some((value) => String(value).toLowerCase().includes(query));
+}
 
-  if ("LOCAL_COHORT" in dt) {
-    return `LOCAL_COHORT:${dt.LOCAL_COHORT}`;
-  }
-
-  if ("REMOTE_COHORT" in dt) {
-    return `REMOTE_COHORT:${dt.REMOTE_COHORT}`;
-  }
-
-  return JSON.stringify(dt);
+function escapeCsv(value: unknown): string {
+  const text = String(value ?? "");
+  return `"${text.split('"').join('""')}"`;
 }
 
 function DimensionManagerContent({
-  pageSize = 20,
-  editable = false,
+  pageSize = 10,
+  editable,
+  enableDetailPage,
 }: DimensionManagerProps) {
   const { config, dimensions } = useSuperposition();
   const { addAlert, confirmAction } = useAlerts();
   const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(pageSize);
+  const [searchTerm, setSearchTerm] = useState("");
   const [showCreate, setShowCreate] = useState(false);
+  const [selectedDimension, setSelectedDimension] = useState<string | null>(null);
   const allowedDimensions = useMemo(
     () => normalizeFilterValues(config.filters?.dimensions),
     [config.filters?.dimensions],
   );
-  const shouldClientPage = Boolean(allowedDimensions && allowedDimensions.length > 0);
-  const canCreate = editable && canUseFeatureAction(config, "dimensions", "create");
-  const canDelete = editable && canUseFeatureAction(config, "dimensions", "delete");
+  const shouldClientPage = Boolean(
+    (allowedDimensions && allowedDimensions.length > 0) || searchTerm.trim(),
+  );
+  const isEditable = isFeatureEditable(config, "dimensions", editable);
+  const detailPageEnabled = isFeatureDetailPageEnabled(
+    config,
+    "dimensions",
+    enableDetailPage,
+  );
+  const canCreate = isEditable && canUseFeatureAction(config, "dimensions", "create");
+  const canDelete = isEditable && canUseFeatureAction(config, "dimensions", "delete");
 
   const { data, loading, refetch } = useApi(
-    () => dimensions.list(shouldClientPage ? { all: true } : { page, count: pageSize }),
-    [dimensions, page, pageSize, shouldClientPage],
+    () =>
+      dimensions.list(shouldClientPage ? { all: true } : { page, count: rowsPerPage }),
+    [dimensions, page, rowsPerPage, shouldClientPage],
   );
 
   const [newName, setNewName] = useState("");
@@ -119,8 +144,8 @@ function DimensionManagerContent({
       setNewDesc("");
       setNewReason("");
       refetch();
-    } catch {
-      addAlert("error", createMutation.error || "Failed to create dimension");
+    } catch (err) {
+      addAlert("error", formatErrorMessage(err, "Could not create dimension."));
     }
   };
 
@@ -137,102 +162,237 @@ function DimensionManagerContent({
     try {
       await deleteMutation.mutate(name);
       refetch();
-    } catch {
-      addAlert("error", deleteMutation.error || "Failed to delete");
+    } catch (err) {
+      addAlert("error", formatErrorMessage(err, "Could not delete dimension."));
     }
   };
 
-  const columns: Column<Dimension>[] = [
-    { key: "dimension", header: "Name", width: "20%" },
-    { key: "position", header: "Position", width: "10%" },
-    {
-      key: "dimension_type",
-      header: "Type",
-      width: "15%",
-      render: (row) => formatDimensionType(row.dimension_type),
-    },
-    { key: "description", header: "Description", width: "25%" },
-    {
-      key: "mandatory",
-      header: "Mandatory",
-      width: "10%",
-      render: (row) => (row.mandatory ? "Yes" : "No"),
-    },
-    {
-      key: "actions",
-      header: "",
-      width: "10%",
-      render: (row) =>
-        !canDelete ? null : (
-          <button
-            style={buttonDanger}
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDelete(row.dimension);
-            }}
-          >
-            Delete
-          </button>
-        ),
-    },
-  ];
-
   const filteredRows = filterDimensions(data?.data ?? [], allowedDimensions);
-  const rows = shouldClientPage
-    ? paginateRows(filteredRows, page, pageSize)
-    : filteredRows;
-  const totalPages = shouldClientPage
-    ? Math.ceil(filteredRows.length / pageSize)
-    : (data?.total_pages ?? 0);
-  const serialNumberProps = resolveTableSerialNumberProps(
-    config.table,
-    (page - 1) * pageSize + 1,
+  const searchedRows = useMemo(
+    () => filteredRows.filter((row) => matchesDimensionSearch(row, searchTerm)),
+    [filteredRows, searchTerm],
   );
+  const rows = shouldClientPage
+    ? paginateRows(searchedRows, page, rowsPerPage)
+    : searchedRows;
+  const totalPages = shouldClientPage
+    ? Math.max(1, Math.ceil(searchedRows.length / rowsPerPage))
+    : (data?.total_pages ?? 0);
+  const totalItems = shouldClientPage
+    ? searchedRows.length
+    : (data?.total_items ?? searchedRows.length);
+  const rowsPerPageOptions = Array.from(new Set([pageSize, 10, 20, 50])).sort(
+    (left, right) => left - right,
+  );
+  const searchAlign = resolveTableSearchAlign(config.table, "dimensions");
 
-  return (
-    <div>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 16,
-        }}
-      >
-        <h2
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, rowsPerPage]);
+
+  useEffect(() => {
+    if (totalPages > 0 && page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
+
+  const handleExport = useCallback(async () => {
+    try {
+      const exportData = await dimensions.list({ all: true });
+      const exportRows = filterDimensions(
+        exportData.data ?? [],
+        allowedDimensions,
+      ).filter((row) => matchesDimensionSearch(row, searchTerm));
+      const csv = [
+        ["S.NO", "NAME", "POSITION", "DESCRIPTION"].join(","),
+        ...exportRows.map((row, index) =>
+          [
+            escapeCsv(index + 1),
+            escapeCsv(row.dimension),
+            escapeCsv(row.position),
+            escapeCsv(row.description || ""),
+          ].join(","),
+        ),
+      ].join("\n");
+
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = objectUrl;
+      anchor.download = "dimensions.csv";
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      addAlert("error", "Failed to export dimensions");
+    }
+  }, [addAlert, allowedDimensions, dimensions, searchTerm]);
+
+  const dimensionColumns = [
+    {
+      key: "dimension",
+      header: "Name",
+      width: "28%",
+      render: (row: Dimension) => (
+        <div style={{ fontSize: 14, fontWeight: 700, color: "var(--sp-color-text)" }}>
+          {row.dimension}
+        </div>
+      ),
+    },
+    {
+      key: "position",
+      header: "Position",
+      width: "12%",
+      render: (row: Dimension) => (
+        <Tag
+          text={String(row.position)}
+          color={TagColor.PRIMARY}
+          variant={TagVariant.SUBTLE}
+          size={TagSize.SM}
+          shape={TagShape.SQUARICAL}
+        />
+      ),
+    },
+    {
+      key: "description",
+      header: "Description",
+      width: canDelete ? "52%" : "60%",
+      render: (row: Dimension) => (
+        <div
           style={{
-            margin: "var(--sp-page-title-margin)",
-            fontSize: "var(--sp-page-title-font-size)",
-            fontWeight: "var(--sp-page-title-font-weight)",
-            color: "var(--sp-page-title-text)",
+            color: row.description ? "var(--sp-color-text)" : "var(--sp-color-muted)",
+            fontSize: 14,
+            lineHeight: 1.45,
+            display: "-webkit-box",
+            WebkitBoxOrient: "vertical",
+            WebkitLineClamp: 2,
+            overflow: "hidden",
           }}
         >
-          Dimensions
-        </h2>
-        {canCreate && (
-          <button style={buttonPrimary} onClick={() => setShowCreate(true)}>
-            {getMessage(config, "dimensions.create", "+ Create Dimension")}
-          </button>
-        )}
-      </div>
+          {row.description || "No description"}
+        </div>
+      ),
+    },
+    ...(canDelete
+      ? [
+          {
+            key: "actions",
+            header: "",
+            width: "8%",
+            align: "right" as const,
+            render: (row: Dimension) => (
+              <BlendTooltip
+                content={`Delete ${row.dimension}`}
+                side={TooltipSide.BOTTOM}
+                showArrow
+              >
+                <Button
+                  type="button"
+                  aria-label={`Delete dimension ${row.dimension}`}
+                  buttonType={ButtonType.DANGER}
+                  size={ButtonSize.SMALL}
+                  subType={ButtonSubType.ICON_ONLY}
+                  leadingIcon={<Trash2 aria-hidden="true" size={14} />}
+                  onClick={(event) => {
+                    event?.stopPropagation();
+                    handleDelete(row.dimension);
+                  }}
+                />
+              </BlendTooltip>
+            ),
+          },
+        ]
+      : []),
+  ];
 
-      <Table
-        columns={columns}
-        data={rows}
-        keyExtractor={(r) => r.dimension}
-        loading={loading}
-        emptyMessage="No dimensions found"
-        emptyDescription={
-          canCreate
-            ? "Create a dimension to make it available for configs and override context."
-            : "No dimensions are available for this workspace."
+  if (detailPageEnabled && selectedDimension) {
+    return (
+      <DimensionDetailPage
+        dimension={selectedDimension}
+        backLabel="Back to dimensions"
+        onBack={() => setSelectedDimension(null)}
+      />
+    );
+  }
+
+  return (
+    <div className="sp-section-stack">
+      <PageHeader
+        title="Dimensions"
+        description="Manage all available dimensions and their metadata."
+        actions={
+          canCreate ? (
+            <Button
+              buttonType={ButtonType.PRIMARY}
+              size={ButtonSize.MEDIUM}
+              text={getMessage(config, "dimensions.create", "Create dimension")}
+              leadingIcon={<Plus aria-hidden="true" size={16} />}
+              onClick={() => setShowCreate(true)}
+            />
+          ) : undefined
         }
-        {...serialNumberProps}
       />
 
-      {data && totalPages > 1 && (
-        <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
-      )}
+      <div className="sp-section-stack">
+        {createMutation.error ? (
+          <InlineNotice
+            title="Could not create dimension"
+            description={createMutation.error}
+            tone="danger"
+          />
+        ) : null}
+
+        {deleteMutation.error ? (
+          <InlineNotice
+            title="Could not delete dimension"
+            description={deleteMutation.error}
+            tone="danger"
+          />
+        ) : null}
+
+        <Table
+          className="sp-table-compact-header sp-table-search-align"
+          searchAlign={searchAlign}
+          columns={dimensionColumns}
+          data={rows}
+          keyExtractor={(row) => row.dimension}
+          loading={loading}
+          showSerialNumber
+          serialNumberHeader="S.No"
+          serialNumberStart={(page - 1) * rowsPerPage + 1}
+          searchPlaceholder="Search dimensions..."
+          onSearchChange={(nextSearchTerm) => {
+            setSearchTerm(nextSearchTerm);
+            setPage(1);
+          }}
+          pagination={{
+            currentPage: page,
+            pageSize: rowsPerPage,
+            totalRows: totalItems,
+            pageSizeOptions: rowsPerPageOptions,
+          }}
+          onPageChange={setPage}
+          onPageSizeChange={(nextRowsPerPage) => {
+            setRowsPerPage(nextRowsPerPage);
+            setPage(1);
+          }}
+          onRowClick={
+            detailPageEnabled ? (row) => setSelectedDimension(row.dimension) : undefined
+          }
+          headerSlot2={
+            <Button
+              type="button"
+              buttonType={ButtonType.SECONDARY}
+              size={ButtonSize.MEDIUM}
+              text="Export"
+              leadingIcon={<Download aria-hidden="true" size={17} strokeWidth={2.2} />}
+              onClick={handleExport}
+            />
+          }
+          tableBodyHeight="min(668px, 65vh)"
+        />
+      </div>
 
       <Modal
         open={showCreate}
@@ -240,16 +400,20 @@ function DimensionManagerContent({
         title="Create Dimension"
         footer={
           <>
-            <button style={buttonSecondary} onClick={() => setShowCreate(false)}>
-              Cancel
-            </button>
-            <button
-              style={buttonPrimary}
+            <Button
+              buttonType={ButtonType.SECONDARY}
+              size={ButtonSize.MEDIUM}
+              text="Cancel"
+              onClick={() => setShowCreate(false)}
+            />
+            <Button
+              buttonType={ButtonType.PRIMARY}
+              size={ButtonSize.MEDIUM}
+              text={createMutation.loading ? "Creating..." : "Create"}
               onClick={handleCreate}
               disabled={!canCreate || createMutation.loading || !newName}
-            >
-              {createMutation.loading ? "Creating..." : "Create"}
-            </button>
+              loading={createMutation.loading}
+            />
           </>
         }
       >
