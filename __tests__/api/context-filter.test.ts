@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { ContextOverride } from "../../src/types";
 import {
-    contextCanBeEditedInScope,
-    contextMatchesScope,
-    filterOverridesByScope,
-    getLockedDimensions,
-    mergeScopedContext,
+  contextCanBeEditedInScope,
+  contextMatchesScope,
+  filterOverridesByScope,
+  getLockedDimensions,
+  mergeScopedContext,
 } from "../../src/utils/context-filter";
 
 describe("contextMatchesScope", () => {

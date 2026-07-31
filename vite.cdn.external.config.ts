@@ -21,7 +21,6 @@ export default defineConfig({
     rollupOptions: {
       external: ["react", "react-dom", "react-dom/client"],
       output: {
-        inlineDynamicImports: true,
         globals: {
           react: "React",
           "react-dom": "ReactDOM",

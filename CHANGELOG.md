@@ -1,10 +1,17 @@
 # Changelog
 
-This package is published from the `clients/embeddable-ui` workspace in the Superposition monorepo.
+This package is distributed through this repository's GitHub Releases.
 
-For repository-wide release notes and historical changes, see:
+## 0.1.4
 
-- https://github.com/juspay/superposition/blob/main/CHANGELOG.md
+- Removed local npm cache files from the repository.
+- Corrected release metadata and validation configuration.
+
+## 0.1.3
+
+- Added Blend design system integration.
+- Added audit trail detail views.
+- Improved override forms, context cards, tables, themes, and search behavior.
 
 ## 0.1.0
 

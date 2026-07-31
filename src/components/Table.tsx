@@ -93,9 +93,9 @@ export function resolveTableSearchAlign(
       ? tableConfig?.defaultConfig
       : feature === "overrides"
         ? tableConfig?.overrides
-      : feature === "dimensions"
-        ? tableConfig?.dimensions
-        : tableConfig?.audit;
+        : feature === "dimensions"
+          ? tableConfig?.dimensions
+          : tableConfig?.audit;
 
   return pageConfig?.searchAlign ?? tableConfig?.searchAlign;
 }

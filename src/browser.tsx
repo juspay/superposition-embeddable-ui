@@ -14,14 +14,9 @@ import {
 import type { SuperpositionEmbeddableConfig } from "./types";
 
 type FeatureComponentProps = Record<string, unknown>;
+type LazyFeature = React.LazyExoticComponent<ComponentType<FeatureComponentProps>>;
 
-function lazyFeature(
-  load: () => Promise<{ default: ComponentType<FeatureComponentProps> }>,
-) {
-  return React.lazy(load);
-}
-
-const featureComponents: Record<FeatureName, ReturnType<typeof lazyFeature>> = {
+const featureComponents: Record<FeatureName, LazyFeature> = {
   admin: React.lazy(async () => {
     const mod = await import("./pages/SuperpositionAdmin");
     return {
@@ -48,27 +43,12 @@ const featureComponents: Record<FeatureName, ReturnType<typeof lazyFeature>> = {
   }),
 };
 
-const featureTagSuffixes: Record<FeatureName, string> = {
-  admin: "admin",
-  "config-manager": "config-manager",
-  "override-manager": "override-manager",
-  "dimension-manager": "dimension-manager",
-  "audit-trail": "audit-trail",
-};
-
-export const customElementTagNames: Record<FeatureName, string> = {
-  admin: createTagName("superposition", featureTagSuffixes.admin),
-  "config-manager": createTagName("superposition", featureTagSuffixes["config-manager"]),
-  "override-manager": createTagName(
-    "superposition",
-    featureTagSuffixes["override-manager"],
-  ),
-  "dimension-manager": createTagName(
-    "superposition",
-    featureTagSuffixes["dimension-manager"],
-  ),
-  "audit-trail": createTagName("superposition", featureTagSuffixes["audit-trail"]),
-};
+export const customElementTagNames = Object.fromEntries(
+  (Object.keys(featureComponents) as FeatureName[]).map((feature) => [
+    feature,
+    createTagName("superposition", feature),
+  ]),
+) as Record<FeatureName, string>;
 
 export function mountSuperpositionFeature(
   container: Element | string,
@@ -82,7 +62,7 @@ export function defineCustomElements(prefix = "superposition") {
   const tagMap = Object.fromEntries(
     (Object.keys(featureComponents) as FeatureName[]).map((feature) => [
       feature,
-      createTagName(prefix, featureTagSuffixes[feature]),
+      createTagName(prefix, feature),
     ]),
   ) as Record<FeatureName, string>;
 
