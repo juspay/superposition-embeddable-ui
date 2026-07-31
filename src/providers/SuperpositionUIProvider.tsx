@@ -77,7 +77,7 @@ export interface SuperpositionContextValue {
 }
 
 const SuperpositionContext = createContext<SuperpositionContextValue | null>(null);
-const ignoreBoundaryContext = () => { };
+const ignoreBoundaryContext = () => {};
 
 function getSystemThemeMode(): Exclude<SuperpositionThemeMode, "system"> {
   if (

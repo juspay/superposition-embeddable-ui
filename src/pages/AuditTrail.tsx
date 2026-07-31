@@ -989,7 +989,6 @@ function AuditTrailContent({ pageSize = 10, filters }: AuditTrailProps) {
   );
   const hostTableFilterKey = hostTableFilters?.join("\u0000") ?? "";
   const hostActionFilterKey = hostActionFilters?.join("\u0000") ?? "";
-  const hostDateFilterKey = getAuditDateRangeKey(hostDateRange);
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(pageSize);
   const [search, setSearch] = useState("");
@@ -1002,10 +1001,9 @@ function AuditTrailContent({ pageSize = 10, filters }: AuditTrailProps) {
   const [dateRange, setDateRange] = useState<AuditTrailDateRange | undefined>(
     hostDateRange,
   );
-  const dateRangeFilterKey = getAuditDateRangeKey(dateRange);
   const effectiveDateRange = useMemo(
     () => getEffectiveAuditDateRange(hostDateRange, dateRange),
-    [dateRangeFilterKey, hostDateFilterKey],
+    [dateRange, hostDateRange],
   );
   const effectiveDateFilterKey = getAuditDateRangeKey(effectiveDateRange);
   const [selectedLog, setSelectedLog] = useState<SelectedAuditLog | null>(null);
@@ -1062,15 +1060,15 @@ function AuditTrailContent({ pageSize = 10, filters }: AuditTrailProps) {
 
   useEffect(() => {
     setTableFilter(hostTableFilters?.length === 1 ? hostTableFilters[0] : "ALL");
-  }, [hostTableFilterKey]);
+  }, [hostTableFilters]);
 
   useEffect(() => {
     setActionFilter(hostActionFilters?.length === 1 ? hostActionFilters[0] : "ALL");
-  }, [hostActionFilterKey]);
+  }, [hostActionFilters]);
 
   useEffect(() => {
     setDateRange(hostDateRange);
-  }, [hostDateFilterKey]);
+  }, [hostDateRange]);
 
   const filteredRows = useMemo(() => {
     const source = data?.data ?? [];

@@ -292,9 +292,7 @@ function AddOptionMenu({
         readOnly
         inputMode="none"
         autoComplete="off"
-        placeholder={
-          hasAvailableOptions ? (placeholder ?? label) : "No keys available"
-        }
+        placeholder={hasAvailableOptions ? (placeholder ?? label) : "No keys available"}
         error={Boolean(errorMessage)}
         errorMessage={errorMessage}
         hintText={

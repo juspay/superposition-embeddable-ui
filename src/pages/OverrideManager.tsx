@@ -1457,7 +1457,7 @@ function OverrideManagerContent({
     }
 
     return { value: contextObject, error: null };
-  }, [contextEntries, contextObject, editingOverride, requiresContextEntries]);
+  }, [contextEntries, contextObject, requiresContextEntries]);
 
   const parsedOverride = useMemo(() => {
     const invalidEntry = overrideEntries.find((entry) => entry.error);

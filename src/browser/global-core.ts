@@ -18,9 +18,11 @@ export interface BrowserCoreGlobalApi {
 }
 
 export function getBrowserCoreGlobal(): BrowserCoreGlobalApi {
-  const core = (globalThis as typeof globalThis & {
-    SuperpositionBrowserCore?: BrowserCoreGlobalApi;
-  }).SuperpositionBrowserCore;
+  const core = (
+    globalThis as typeof globalThis & {
+      SuperpositionBrowserCore?: BrowserCoreGlobalApi;
+    }
+  ).SuperpositionBrowserCore;
 
   if (!core) {
     throw new Error(

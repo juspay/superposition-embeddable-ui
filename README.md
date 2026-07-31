@@ -21,16 +21,19 @@ Embeddable React admin UI for Superposition configuration management.
 
 ## Packaging this for another app
 
-If your friend wants to embed this today, there are three practical distribution paths:
+The package is distributed through GitHub Releases. Consumers can either:
 
-1. Publish the package to npm and let them install it.
-2. Run `npm pack` in this package and share the generated tarball for a private install.
-3. Ship the `dist/` artifacts and let them load the global bundle or browser entry directly.
+1. Install the release tarball.
+2. Download the `dist/` artifacts and load the global bundle or browser entry directly.
 
 Typical release flow:
 
 ```bash
-cd clients/embeddable-ui
+npm ci
+npm run lint
+npm run typecheck
+npm run format:check
+npm test
 npm run build
 npm pack
 ```
@@ -38,10 +41,8 @@ npm pack
 That produces a tarball your friend can install with:
 
 ```bash
-npm install /path/to/superposition-embeddable-ui-0.1.0.tgz
+npm install https://github.com/juspay/superposition-embeddable-ui/releases/download/v0.1.4/superposition-embeddable-ui-0.1.4.tgz
 ```
-
-If you plan to publish publicly or internally, rename the package to your final scope first.
 
 ## What a host app supplies
 

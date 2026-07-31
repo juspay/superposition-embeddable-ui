@@ -24,29 +24,14 @@ const featureComponents = {
   "override-manager": OverrideManager,
   "dimension-manager": DimensionManager,
   "audit-trail": AuditTrail,
-} satisfies Record<FeatureName, ComponentType<any>>;
+} satisfies Record<FeatureName, ComponentType<never>>;
 
-const featureTagSuffixes: Record<FeatureName, string> = {
-  admin: "admin",
-  "config-manager": "config-manager",
-  "override-manager": "override-manager",
-  "dimension-manager": "dimension-manager",
-  "audit-trail": "audit-trail",
-};
-
-export const customElementTagNames: Record<FeatureName, string> = {
-  admin: createTagName("superposition", featureTagSuffixes.admin),
-  "config-manager": createTagName("superposition", featureTagSuffixes["config-manager"]),
-  "override-manager": createTagName(
-    "superposition",
-    featureTagSuffixes["override-manager"],
-  ),
-  "dimension-manager": createTagName(
-    "superposition",
-    featureTagSuffixes["dimension-manager"],
-  ),
-  "audit-trail": createTagName("superposition", featureTagSuffixes["audit-trail"]),
-};
+export const customElementTagNames = Object.fromEntries(
+  (Object.keys(featureComponents) as FeatureName[]).map((feature) => [
+    feature,
+    createTagName("superposition", feature),
+  ]),
+) as Record<FeatureName, string>;
 
 export function mountSuperpositionFeature(
   container: Element | string,
@@ -64,7 +49,7 @@ export function defineFeatureCustomElement(
   feature: FeatureName,
   prefix = "superposition",
 ) {
-  const tagName = createTagName(prefix, featureTagSuffixes[feature]);
+  const tagName = createTagName(prefix, feature);
   return defineSingleCustomElement(
     tagName,
     featureComponents[feature] as ComponentType<FeatureComponentProps>,
