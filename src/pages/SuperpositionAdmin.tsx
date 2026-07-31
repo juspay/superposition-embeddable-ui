@@ -1,5 +1,7 @@
+import { Tabs, TabsSize, TabsVariant, TagColor } from "@juspay/blend-design-system";
 import React, { useState } from "react";
-import { BoundaryFilterControl } from "../components/BoundaryFilterControl";
+import "../blend-react-compat";
+import { BoundaryFilterControl, EmptyState, MetaTag } from "../components";
 import { AlertProvider } from "../providers/AlertProvider";
 import { useSuperposition } from "../providers/SuperpositionUIProvider";
 import {
@@ -7,9 +9,10 @@ import {
   SUPERPOSITION_FEATURES,
   type SuperpositionFeature,
 } from "../types";
+import { AuditTrail } from "./AuditTrail";
 import { ConfigManager } from "./ConfigManager";
 import { DimensionManager } from "./DimensionManager";
-import { getMessage } from "./FeatureGate";
+import { getMessage, isFeatureEditable } from "./FeatureGate";
 import { OverrideManager } from "./OverrideManager";
 
 type Tab = SuperpositionFeature;
@@ -23,6 +26,7 @@ const tabComponents: Record<Tab, React.FC> = {
   config: ConfigManager,
   overrides: OverrideManager,
   dimensions: DimensionManager,
+  audit: AuditTrail,
 };
 
 export interface SuperpositionAdminProps {
@@ -35,8 +39,8 @@ export interface SuperpositionAdminProps {
 export function SuperpositionAdmin({
   defaultFeature,
   defaultTab = "config",
-  allowConfigEditing = false,
-  allowDimensionEditing = false,
+  allowConfigEditing,
+  allowDimensionEditing,
 }: SuperpositionAdminProps) {
   const { config } = useSuperposition();
   const features = config.features;
@@ -60,8 +64,6 @@ export function SuperpositionAdmin({
         visibleTabs[0]?.id ??
         activeTab);
 
-  const ActiveComponent = tabComponents[selectedTab];
-
   const handleTabChange = (tab: Tab) => {
     if (routing?.mode !== "external") {
       setActiveTab(tab);
@@ -70,164 +72,96 @@ export function SuperpositionAdmin({
     routing?.onNavigate?.(tab);
   };
 
+  const renderFeature = (tab: Tab) => {
+    if (tab === "config") {
+      return (
+        <ConfigManager
+          editable={isFeatureEditable(config, "config", allowConfigEditing)}
+        />
+      );
+    }
+
+    if (tab === "dimensions") {
+      return (
+        <DimensionManager
+          editable={isFeatureEditable(config, "dimensions", allowDimensionEditing)}
+        />
+      );
+    }
+
+    const Component = tabComponents[tab];
+    return <Component />;
+  };
+
   if (visibleTabs.length === 0) {
     return (
       <AlertProvider>
-        <div
-          role="status"
-          style={{
-            fontFamily: "inherit",
-            color: "var(--sp-color-muted)",
-            background: "var(--sp-color-bg)",
-            border: "1px solid var(--sp-color-border)",
-            borderRadius: "var(--sp-radius-lg)",
-            padding: "var(--sp-space-lg)",
-          }}
-        >
-          {getMessage(
+        <EmptyState
+          title={getMessage(
             config,
             "admin.noFeatures",
             "No Superposition features are enabled for this embed.",
           )}
-        </div>
+        />
       </AlertProvider>
     );
   }
 
   return (
     <AlertProvider>
-      <div
-        style={{
-          fontFamily: "inherit",
-          color: "var(--sp-color-text)",
-          background: "var(--sp-color-bg)",
-          border: "1px solid var(--sp-color-border)",
-          borderRadius: "var(--sp-radius-lg)",
-          padding: "var(--sp-space-lg)",
-          boxShadow: "var(--sp-shadow-sm)",
-        }}
-      >
-        <div style={{ display: "grid", gap: "var(--sp-space-lg)" }}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: "var(--sp-space-sm)",
-              flexWrap: "wrap",
-            }}
-          >
+      <div className="sp-admin-shell">
+        <div className="sp-section-stack">
+          <div className="sp-admin-topbar">
             {showBoundaryFilter ? <BoundaryFilterControl /> : null}
-            <div
-              style={{
-                display: "flex",
-                gap: "var(--sp-space-sm)",
-                flexWrap: "wrap",
-                justifyContent: "flex-end",
-              }}
-            >
-              {[`Org ${config.orgId}`, `Workspace ${config.workspace}`].map((item) => (
-                <div
-                  key={item}
-                  style={{
-                    padding: "var(--sp-space-xs) var(--sp-space-sm)",
-                    borderRadius: "var(--sp-pill-radius)",
-                    background: "var(--sp-color-primary-soft)",
-                    border:
-                      "1px solid color-mix(in oklab, var(--sp-color-primary) 16%, var(--sp-color-border))",
-                    color: "var(--sp-color-text)",
-                    fontSize: "0.86rem",
-                    fontWeight: 600,
-                  }}
-                >
-                  {item}
-                </div>
-              ))}
+            <div className="sp-admin-meta">
+              <MetaTag text={`Org ${config.orgId}`} color={TagColor.NEUTRAL} />
+              <MetaTag text={`Workspace ${config.workspace}`} color={TagColor.PRIMARY} />
             </div>
           </div>
 
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "var(--sp-space-md)",
-              flexWrap: "wrap",
-              padding: "var(--sp-space-xs)",
-              background: "var(--sp-color-panel)",
-              borderRadius: "var(--sp-card-radius)",
-              border: "1px solid var(--sp-color-border)",
-            }}
-          >
-            <div style={{ display: "flex", gap: "var(--sp-space-sm)", flexWrap: "wrap" }}>
-              {visibleTabs.map((tab) =>
-                (() => {
-                  const isActive = selectedTab === tab.id;
-                  const sharedStyle = {
-                    padding: "var(--sp-space-sm) var(--sp-space-md)",
-                    border: isActive
-                      ? "1px solid color-mix(in oklab, var(--sp-color-primary) 22%, var(--sp-color-border))"
-                      : "1px solid transparent",
-                    borderRadius: "var(--sp-pill-radius)",
-                    background: isActive ? "var(--sp-color-primary-soft)" : "transparent",
-                    color: isActive ? "var(--sp-color-text)" : "var(--sp-color-muted)",
-                    fontWeight: isActive ? 700 : 600,
-                    cursor: "pointer",
-                    fontSize: "0.93rem",
-                    textDecoration: "none",
-                    transition:
-                      "background 180ms ease, border-color 180ms ease, color 180ms ease",
-                  } as const;
+          {routing?.mode === "external" ? (
+            <>
+              <nav className="sp-admin-tabs" aria-label="Superposition features">
+                {visibleTabs.map((tab) =>
+                  (() => {
+                    const isActive = selectedTab === tab.id;
+                    const href = routing?.getFeatureHref?.(tab.id);
 
-                  const href = routing?.getFeatureHref?.(tab.id);
-
-                  if (href) {
                     return (
                       <a
                         key={tab.id}
                         href={href}
+                        aria-current={isActive ? "page" : undefined}
+                        className={
+                          isActive ? "sp-admin-tab sp-admin-tab--active" : "sp-admin-tab"
+                        }
                         onClick={(event) => {
                           event.preventDefault();
                           handleTabChange(tab.id);
                         }}
-                        style={sharedStyle}
                       >
                         {tab.label}
                       </a>
                     );
-                  }
-
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => handleTabChange(tab.id)}
-                      style={sharedStyle}
-                    >
-                      {tab.label}
-                    </button>
-                  );
-                })(),
-              )}
-            </div>
-          </div>
-
-          <div
-            style={{
-              background: "var(--sp-color-panel)",
-              border: "1px solid var(--sp-color-border)",
-              borderRadius: "var(--sp-radius-lg)",
-              padding: "var(--sp-space-lg)",
-              minHeight: "var(--sp-admin-content-min-height)",
-              overflow: "auto",
-            }}
-          >
-            {selectedTab === "config" ? (
-              <ConfigManager editable={allowConfigEditing} />
-            ) : selectedTab === "dimensions" ? (
-              <DimensionManager editable={allowDimensionEditing} />
-            ) : (
-              <ActiveComponent />
-            )}
-          </div>
+                  })(),
+                )}
+              </nav>
+              <div className="sp-admin-content">{renderFeature(selectedTab)}</div>
+            </>
+          ) : (
+            <Tabs
+              value={selectedTab}
+              onValueChange={(value) => handleTabChange(value as Tab)}
+              variant={TabsVariant.UNDERLINE}
+              size={TabsSize.MD}
+              showDropdown
+              items={visibleTabs.map((tab) => ({
+                value: tab.id,
+                label: tab.label,
+                content: <div className="sp-admin-content">{renderFeature(tab.id)}</div>,
+              }))}
+            />
+          )}
         </div>
       </div>
     </AlertProvider>

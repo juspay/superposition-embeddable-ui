@@ -1,5 +1,7 @@
-import React from "react";
+import "./blend-react-compat";
+
 import type { ComponentType } from "react";
+import React from "react";
 import {
   createTagName,
   defineSingleCustomElement,
@@ -22,7 +24,9 @@ function lazyFeature(
 const featureComponents: Record<FeatureName, ReturnType<typeof lazyFeature>> = {
   admin: React.lazy(async () => {
     const mod = await import("./pages/SuperpositionAdmin");
-    return { default: mod.SuperpositionAdmin as React.ComponentType<FeatureComponentProps> };
+    return {
+      default: mod.SuperpositionAdmin as React.ComponentType<FeatureComponentProps>,
+    };
   }),
   "config-manager": React.lazy(async () => {
     const mod = await import("./pages/ConfigManager");
@@ -34,7 +38,13 @@ const featureComponents: Record<FeatureName, ReturnType<typeof lazyFeature>> = {
   }),
   "dimension-manager": React.lazy(async () => {
     const mod = await import("./pages/DimensionManager");
-    return { default: mod.DimensionManager as React.ComponentType<FeatureComponentProps> };
+    return {
+      default: mod.DimensionManager as React.ComponentType<FeatureComponentProps>,
+    };
+  }),
+  "audit-trail": React.lazy(async () => {
+    const mod = await import("./pages/AuditTrail");
+    return { default: mod.AuditTrail as React.ComponentType<FeatureComponentProps> };
   }),
 };
 
@@ -43,16 +53,21 @@ const featureTagSuffixes: Record<FeatureName, string> = {
   "config-manager": "config-manager",
   "override-manager": "override-manager",
   "dimension-manager": "dimension-manager",
+  "audit-trail": "audit-trail",
 };
 
 export const customElementTagNames: Record<FeatureName, string> = {
   admin: createTagName("superposition", featureTagSuffixes.admin),
   "config-manager": createTagName("superposition", featureTagSuffixes["config-manager"]),
-  "override-manager": createTagName("superposition", featureTagSuffixes["override-manager"]),
+  "override-manager": createTagName(
+    "superposition",
+    featureTagSuffixes["override-manager"],
+  ),
   "dimension-manager": createTagName(
     "superposition",
     featureTagSuffixes["dimension-manager"],
   ),
+  "audit-trail": createTagName("superposition", featureTagSuffixes["audit-trail"]),
 };
 
 export function mountSuperpositionFeature(

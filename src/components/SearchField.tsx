@@ -1,3 +1,4 @@
+import "../blend-react-compat";
 import { SearchInput } from "@juspay/blend-design-system";
 import { Search } from "lucide-react";
 

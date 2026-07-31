@@ -23,6 +23,11 @@ const featureGlobals = {
     name: "SuperpositionDimensionManagerUI",
     fileName: "superposition-dimension-manager.global.external.js",
   },
+  "audit-trail": {
+    entry: "src/browser/audit-trail.global.tsx",
+    name: "SuperpositionAuditTrailUI",
+    fileName: "superposition-audit-trail.global.external.js",
+  },
 } as const;
 
 const selectedFeature = process.env.SUPERPOSITION_CDN_FEATURE as
@@ -31,7 +36,7 @@ const selectedFeature = process.env.SUPERPOSITION_CDN_FEATURE as
 
 if (!selectedFeature || !featureGlobals[selectedFeature]) {
   throw new Error(
-    "SUPERPOSITION_CDN_FEATURE must be one of: admin, config-manager, override-manager, dimension-manager",
+    "SUPERPOSITION_CDN_FEATURE must be one of: admin, config-manager, override-manager, dimension-manager, audit-trail",
   );
 }
 

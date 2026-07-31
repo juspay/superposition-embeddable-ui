@@ -1,5 +1,18 @@
+export { AuditTrail } from "./AuditTrail";
+export type { AuditTrailProps } from "./AuditTrail";
+export {
+  ConfigDetailPage,
+  ConfigDetailPage as ConfigPage,
+  ConfigDetailPage as DefaultConfigPage,
+} from "./ConfigDetailPage";
+export type { ConfigDetailPageProps } from "./ConfigDetailPage";
 export { ConfigManager, ConfigManager as DefaultConfigManager } from "./ConfigManager";
 export type { ConfigManagerProps } from "./ConfigManager";
+export {
+  DimensionDetailPage,
+  DimensionDetailPage as DimensionPage,
+} from "./DimensionDetailPage";
+export type { DimensionDetailPageProps } from "./DimensionDetailPage";
 export {
   DimensionManager,
   DimensionManager as DimensionsManager,

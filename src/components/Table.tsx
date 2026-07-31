@@ -1,11 +1,18 @@
-import React from "react";
+import "../blend-react-compat";
 import {
   ColumnType,
   DataTable,
   type ColumnDefinition,
+  type SearchConfig,
 } from "@juspay/blend-design-system";
-import type { SuperpositionTableConfig } from "../types";
-import { EmptyState } from "./EmptyState";
+import React from "react";
+import type {
+  SuperpositionFeature,
+  SuperpositionSearchAlign,
+  SuperpositionTableConfig,
+} from "../types";
+import { Pagination, useResponsivePaginationFallback } from "./Pagination";
+import { SearchField } from "./SearchField";
 
 export interface Column<T> {
   key: string;
@@ -18,16 +25,31 @@ export interface Column<T> {
 export interface TableProps<T> {
   columns: Column<T>[];
   data: T[];
+  className?: string;
   keyExtractor: (row: T) => string;
   onRowClick?: (row: T) => void;
-  emptyMessage?: string;
-  emptyDescription?: string;
   loading?: boolean;
   showSerialNumber?: boolean;
   serialNumberHeader?: string;
   serialNumberStart?: number;
   serialNumberWidth?: string;
   serialNumberAlign?: "left" | "center" | "right";
+  searchPlaceholder?: string;
+  onSearchChange?: (query: string) => void;
+  pagination?: {
+    currentPage: number;
+    pageSize: number;
+    totalRows: number;
+    pageSizeOptions?: number[];
+  };
+  onPageChange?: (page: number) => void;
+  onPageSizeChange?: (pageSize: number) => void;
+  headerSlot1?: React.ReactNode;
+  headerSlot2?: React.ReactNode;
+  enableColumnManager?: boolean;
+  columnManagerAlwaysSelected?: string[];
+  tableBodyHeight?: string;
+  searchAlign?: SuperpositionSearchAlign;
 }
 
 export type TableSerialNumberProps = Pick<
@@ -62,14 +84,38 @@ export function resolveTableSerialNumberProps(
   };
 }
 
-const tableStyle: React.CSSProperties = {
-  width: "100%",
-  minWidth: "var(--sp-table-min-width)",
-  borderCollapse: "collapse",
-  fontSize: "1rem",
-  background: "var(--sp-color-panel)",
-  opacity: "var(--sp-table-opacity)",
-};
+export function resolveTableSearchAlign(
+  tableConfig: SuperpositionTableConfig | undefined,
+  feature: SuperpositionFeature,
+): SuperpositionSearchAlign | undefined {
+  const pageConfig =
+    feature === "config"
+      ? tableConfig?.defaultConfig
+      : feature === "overrides"
+        ? tableConfig?.overrides
+      : feature === "dimensions"
+        ? tableConfig?.dimensions
+        : tableConfig?.audit;
+
+  return pageConfig?.searchAlign ?? tableConfig?.searchAlign;
+}
+
+export function searchAlignStyle(
+  searchAlign?: SuperpositionSearchAlign,
+): React.CSSProperties | undefined {
+  if (!searchAlign) return undefined;
+
+  const justifyContent =
+    searchAlign === "center"
+      ? "center"
+      : searchAlign === "right"
+        ? "flex-end"
+        : "flex-start";
+
+  return {
+    "--sp-search-justify-content": justifyContent,
+  } as React.CSSProperties;
+}
 
 function toTitleCase(value: string) {
   if (!value.trim()) return value;
@@ -92,45 +138,40 @@ function toTitleCase(value: string) {
 export function Table<T>({
   columns,
   data,
+  className,
   keyExtractor,
   onRowClick,
-  emptyMessage = "No data",
-  emptyDescription,
   loading = false,
   showSerialNumber = false,
   serialNumberHeader = "#",
   serialNumberStart = 1,
   serialNumberWidth = "64px",
   serialNumberAlign = "left",
+  searchPlaceholder = "Search...",
+  onSearchChange,
+  pagination,
+  onPageChange,
+  onPageSizeChange,
+  headerSlot1,
+  headerSlot2,
+  enableColumnManager = false,
+  columnManagerAlwaysSelected,
+  tableBodyHeight,
+  searchAlign,
 }: TableProps<T>) {
+  const shouldRenderAlignedSearch = Boolean(onSearchChange && searchAlign);
+  const [alignedSearch, setAlignedSearch] = React.useState("");
+  const shouldShowToolbar = Boolean(
+    (!shouldRenderAlignedSearch && onSearchChange) || headerSlot1 || headerSlot2,
+  );
+  const shouldShowHeader = shouldShowToolbar;
+  const shouldUsePaginationFallback = useResponsivePaginationFallback();
+
   type TableRow = Record<string, unknown> & {
     __spId: string;
     __spRow: T;
     __spSerial?: number;
   };
-
-  if (loading) {
-    return (
-      <div>
-        <span
-          style={{
-            position: "absolute",
-            width: 1,
-            height: 1,
-            padding: 0,
-            margin: -1,
-            overflow: "hidden",
-            clip: "rect(0 0 0 0)",
-            whiteSpace: "nowrap",
-            border: 0,
-          }}
-        >
-          Loading...
-        </span>
-        <DataTable idField="__spId" columns={[]} data={[]} isLoading />
-      </div>
-    );
-  }
 
   const tableRows: TableRow[] = data.map((row, index) => ({
     __spId: keyExtractor(row),
@@ -182,42 +223,65 @@ export function Table<T>({
     ),
   ];
 
-  if (data.length === 0) {
-    return (
-      <EmptyState
-        title={emptyMessage}
-        description={emptyDescription}
-        minHeight="var(--sp-table-empty-min-height)"
-      />
-    );
-  }
-
   return (
-    <div
-      style={{
-        overflowX: "auto",
-        border: "1px solid var(--sp-color-border)",
-        borderRadius: "var(--sp-card-radius)",
-        background: "var(--sp-color-panel)",
-      }}
-    >
-      <div style={tableStyle}>
-        <DataTable
-          idField="__spId"
-          columns={blendColumns}
-          data={tableRows}
-          showHeader={false}
-          showToolbar={false}
-          showSettings={false}
-          showFooter={false}
-          isHoverable={Boolean(onRowClick)}
-          onRowClick={
-            onRowClick ? (tableRow) => onRowClick(tableRow.__spRow as T) : undefined
-          }
-          getRowStyle={() => ({ cursor: onRowClick ? "pointer" : "default" })}
-          mobileColumnsToShow={blendColumns.length}
+    <div className={className} style={searchAlignStyle(searchAlign)}>
+      {shouldRenderAlignedSearch ? (
+        <div className="sp-table-search-row">
+          <SearchField
+            value={alignedSearch}
+            placeholder={searchPlaceholder}
+            onChange={(nextSearch) => {
+              setAlignedSearch(nextSearch);
+              onSearchChange?.(nextSearch);
+            }}
+          />
+        </div>
+      ) : null}
+      <DataTable
+        idField="__spId"
+        columns={blendColumns}
+        data={tableRows}
+        isLoading={loading}
+        showHeader={shouldShowHeader}
+        showToolbar={shouldShowToolbar}
+        showFooter={Boolean(pagination) && !shouldUsePaginationFallback}
+        pagination={pagination}
+        serverSidePagination={Boolean(pagination)}
+        onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
+        enableColumnManager={enableColumnManager}
+        columnManagerAlwaysSelected={
+          columnManagerAlwaysSelected as Array<keyof TableRow> | undefined
+        }
+        isHoverable={Boolean(onRowClick)}
+        enableSearch={Boolean(onSearchChange) && !shouldRenderAlignedSearch}
+        searchPlaceholder={searchPlaceholder}
+        serverSideSearch={Boolean(onSearchChange) && !shouldRenderAlignedSearch}
+        onSearchChange={
+          onSearchChange && !shouldRenderAlignedSearch
+            ? (searchConfig: SearchConfig) => onSearchChange(searchConfig.query)
+            : undefined
+        }
+        headerSlot1={headerSlot1}
+        headerSlot2={headerSlot2}
+        tableBodyHeight={tableBodyHeight}
+        onRowClick={
+          onRowClick ? (tableRow) => onRowClick(tableRow.__spRow as T) : undefined
+        }
+        getRowStyle={() => ({ cursor: onRowClick ? "pointer" : "default" })}
+      />
+      {pagination && shouldUsePaginationFallback ? (
+        <Pagination
+          currentPage={pagination.currentPage}
+          totalPages={Math.max(1, Math.ceil(pagination.totalRows / pagination.pageSize))}
+          totalItems={pagination.totalRows}
+          rowsPerPage={pagination.pageSize}
+          rowsPerPageOptions={pagination.pageSizeOptions}
+          showSinglePage
+          onPageChange={onPageChange ?? (() => {})}
+          onRowsPerPageChange={onPageSizeChange}
         />
-      </div>
+      ) : null}
     </div>
   );
 }

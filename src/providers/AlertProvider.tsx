@@ -1,3 +1,4 @@
+import "../blend-react-compat";
 import React, { createContext, useCallback, useContext, useState } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -10,6 +11,7 @@ import {
   Modal as BlendModal,
 } from "@juspay/blend-design-system";
 import type { ConfirmInput, SuperpositionUiAdapters } from "../types";
+import { formatErrorMessage } from "../utils/errors";
 import { confirmAction as resolveConfirmAction } from "../utils/ui-adapters";
 import {
   useOptionalSuperposition,
@@ -124,13 +126,15 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
 
   const addAlert = useCallback(
     (type: AlertType, message: string) => {
+      const displayMessage = type === "error" ? formatErrorMessage(message) : message;
+
       if (ui?.notify) {
-        ui.notify({ tone: type, title: message });
+        ui.notify({ tone: type, title: displayMessage });
         return;
       }
 
       const id = `alert-${++alertCounter}`;
-      setAlerts((prev) => [...prev, { id, type, message }]);
+      setAlerts((prev) => [...prev, { id, type, message: displayMessage }]);
       setTimeout(() => {
         setAlerts((prev) => prev.filter((a) => a.id !== id));
       }, 5000);

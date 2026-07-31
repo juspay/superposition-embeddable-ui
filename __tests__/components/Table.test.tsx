@@ -1,6 +1,9 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type { FormEvent } from "react";
 import { resolveTableSerialNumberProps, Table } from "../../src/components/Table";
+import { SuperpositionUIProvider } from "../../src/providers/SuperpositionUIProvider";
 
 interface Row {
   id: string;
@@ -30,19 +33,10 @@ describe("Table", () => {
     expect(screen.getByText("25 years")).toBeDefined();
   });
 
-  it("shows empty message when no data", () => {
-    render(
-      <Table
-        columns={columns}
-        data={[]}
-        keyExtractor={(r: Row) => r.id}
-        emptyMessage="Nothing here"
-        emptyDescription="Add a row to populate this table."
-      />,
-    );
-
-    expect(screen.getByText("Nothing here")).toBeDefined();
-    expect(screen.getByText("Add a row to populate this table.")).toBeDefined();
+  it("renders with empty data", () => {
+    expect(() =>
+      render(<Table columns={columns} data={[]} keyExtractor={(r: Row) => r.id} />),
+    ).not.toThrow();
   });
 
   it("shows loading state", () => {
@@ -55,7 +49,7 @@ describe("Table", () => {
       />,
     );
 
-    expect(screen.getByText("Loading...")).toBeDefined();
+    expect(screen.getByText("Loading data...")).toBeDefined();
   });
 
   it("calls onRowClick when row is clicked", () => {
@@ -89,6 +83,115 @@ describe("Table", () => {
     expect(screen.getByText("11")).toBeDefined();
     expect(screen.getByText("12")).toBeDefined();
     expect(screen.getByText("11").style.textAlign).toBe("left");
+  });
+
+  it("keeps Blend table controls from submitting host forms", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn((event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+    });
+    const onPageSizeChange = vi.fn();
+
+    render(
+      <form onSubmit={onSubmit}>
+        <SuperpositionUIProvider
+          config={{ apiBaseUrl: "/api", orgId: "org", workspace: "ws" }}
+        >
+          <Table
+            columns={columns}
+            data={data}
+            keyExtractor={(row) => row.id}
+            pagination={{
+              currentPage: 1,
+              pageSize: 10,
+              totalRows: 25,
+              pageSizeOptions: [10, 20],
+            }}
+            onPageChange={vi.fn()}
+            onPageSizeChange={onPageSizeChange}
+            enableColumnManager
+            columnManagerAlwaysSelected={["name"]}
+          />
+        </SuperpositionUIProvider>
+      </form>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Manage columns" }));
+    await user.click(
+      screen.getByRole("button", { name: "Select number of rows per page" }),
+    );
+    await user.click(await screen.findByText("20"));
+
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(onPageSizeChange).toHaveBeenCalledWith(20);
+  });
+
+  it("keeps rows-per-page warning-free on narrow screens", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn((event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+    });
+    const onPageSizeChange = vi.fn();
+    const originalInnerWidth = window.innerWidth;
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      writable: true,
+      value: 500,
+    });
+    window.dispatchEvent(new Event("resize"));
+
+    try {
+      render(
+        <form onSubmit={onSubmit}>
+          <SuperpositionUIProvider
+            config={{ apiBaseUrl: "/api", orgId: "org", workspace: "ws" }}
+          >
+            <Table
+              columns={columns}
+              data={data}
+              keyExtractor={(row) => row.id}
+              pagination={{
+                currentPage: 1,
+                pageSize: 10,
+                totalRows: 25,
+                pageSizeOptions: [10, 20],
+              }}
+              onPageChange={vi.fn()}
+              onPageSizeChange={onPageSizeChange}
+            />
+          </SuperpositionUIProvider>
+        </form>,
+      );
+
+      await user.click(
+        screen.getByRole("button", { name: "Select number of rows per page" }),
+      );
+      await user.click(await screen.findByText("20 / page"));
+
+      const consoleMessages = consoleErrorSpy.mock.calls
+        .flat()
+        .map((message) => String(message));
+
+      expect(onSubmit).not.toHaveBeenCalled();
+      expect(onPageSizeChange).toHaveBeenCalledWith(20);
+      expect(
+        consoleMessages.some(
+          (message) =>
+            message.includes("Function components cannot be given refs") ||
+            message.includes("enableVirtualization"),
+        ),
+      ).toBe(false);
+    } finally {
+      consoleErrorSpy.mockRestore();
+      Object.defineProperty(window, "innerWidth", {
+        configurable: true,
+        writable: true,
+        value: originalInnerWidth,
+      });
+      window.dispatchEvent(new Event("resize"));
+    }
   });
 
   it("resolves serial number options from embeddable config", () => {

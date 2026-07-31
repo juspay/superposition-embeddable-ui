@@ -1,196 +1,199 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Superposition Embeddable UI - Demo</title>
-    <style>
-      * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-      }
 
-      body {
-        font-family:
-          InterDisplay,
-          -apple-system,
-          BlinkMacSystemFont,
-          "Segoe UI",
-          system-ui,
-          sans-serif;
-        background: #f5f7fa;
-        color: #0e121b;
-      }
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Superposition Embeddable UI - Demo</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-      header {
-        background: #0e121b;
-        color: #ffffff;
-        padding: 16px 24px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        border-bottom: 1px solid #2b303b;
-      }
+    body {
+      font-family:
+        InterDisplay,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        system-ui,
+        sans-serif;
+      background: #f5f7fa;
+      color: #0e121b;
+    }
 
-      header h1 {
-        font-size: 18px;
-        font-weight: 600;
-      }
+    header {
+      background: #ffffff;
+      color: #0e121b;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #e1e4ea;
+    }
 
-      header .badge {
-        font-size: 11px;
-        background: #2b7fff;
-        padding: 3px 8px;
-        border-radius: 6px;
-      }
+    header h1 {
+      font-size: 18px;
+      font-weight: 600;
+    }
 
-      .toolbar {
-        background: #ffffff;
-        border-bottom: 1px solid #e1e4ea;
-        padding: 12px 24px;
-        display: flex;
-        gap: 12px;
-        flex-wrap: wrap;
-        align-items: center;
-      }
+    header .badge {
+      font-size: 11px;
+      background: #eff6ff;
+      color: #1447e6;
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
 
-      .toolbar-links {
-        display: flex;
-        align-items: center;
-        margin-right: 8px;
-      }
+    .toolbar {
+      background: #ffffff;
+      border-bottom: 1px solid #e1e4ea;
+      padding: 12px 24px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
 
-      .toolbar-links a {
-        font-size: 13px;
-        color: #1447e6;
-        text-decoration: none;
-        font-weight: 600;
-      }
+    .toolbar-links {
+      display: flex;
+      align-items: center;
+      margin-right: 8px;
+    }
 
-      .toolbar-chip {
-        padding: 6px 10px;
-        border-radius: 999px;
-        font-size: 12px;
-        background: #eff6ff;
-        border: 1px solid #bedbff;
-        color: #1447e6;
-        font-weight: 600;
-      }
+    .toolbar-links a {
+      font-size: 13px;
+      color: #1447e6;
+      text-decoration: none;
+      font-weight: 600;
+    }
 
-      .toolbar label {
-        font-size: 13px;
-        font-weight: 500;
-        color: #2b303b;
-      }
+    .toolbar-chip {
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      background: #eff6ff;
+      border: 1px solid #bedbff;
+      color: #1447e6;
+      font-weight: 600;
+    }
 
-      .toolbar input,
-      .toolbar select {
-        font-size: 13px;
-        padding: 6px 10px;
-        border: 1px solid #e1e4ea;
-        border-radius: 8px;
-        background: #ffffff;
-        color: #0e121b;
-      }
+    .toolbar label {
+      font-size: 13px;
+      font-weight: 500;
+      color: #2b303b;
+    }
 
-      .toolbar input:focus,
-      .toolbar select:focus {
-        outline: none;
-        border-color: #2b7fff;
-        box-shadow: 0 0 0 3px #eff6ff;
-      }
+    .toolbar input,
+    .toolbar select {
+      font-size: 13px;
+      padding: 6px 10px;
+      border: 1px solid #e1e4ea;
+      border-radius: 8px;
+      background: #ffffff;
+      color: #0e121b;
+    }
 
-      .toolbar button {
-        font-size: 13px;
-        padding: 6px 16px;
-        border: none;
-        border-radius: 8px;
-        background: #2b7fff;
-        color: #ffffff;
-        cursor: pointer;
-        font-weight: 500;
-      }
+    .toolbar input:focus,
+    .toolbar select:focus {
+      outline: none;
+      border-color: #2b7fff;
+      box-shadow: 0 0 0 3px #eff6ff;
+    }
 
-      .toolbar button:hover {
-        background: #0561e2;
-      }
+    .toolbar button {
+      font-size: 13px;
+      padding: 6px 16px;
+      border: none;
+      border-radius: 8px;
+      background: #2b7fff;
+      color: #ffffff;
+      cursor: pointer;
+      font-weight: 500;
+    }
 
-      .toolbar button:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
+    .toolbar button:hover {
+      background: #0561e2;
+    }
 
-      .demo-notes {
-        margin: 0 24px 12px;
-        padding: 12px 16px;
-        background: #ffffff;
-        border: 1px solid #e1e4ea;
-        border-radius: 8px;
-        display: grid;
-        gap: 8px;
-        font-size: 13px;
-      }
+    .toolbar button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
 
-      .demo-notes code {
-        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-        background: #f5f7fa;
-        padding: 2px 6px;
-        border-radius: 6px;
-      }
+    .demo-notes {
+      margin: 0 24px 12px;
+      padding: 12px 16px;
+      background: #ffffff;
+      border: 1px solid #e1e4ea;
+      border-radius: 8px;
+      display: grid;
+      gap: 8px;
+      font-size: 13px;
+    }
 
-      #app-root {
-        max-width: 1200px;
-        margin: 24px auto;
-        background: #ffffff;
-        border: 1px solid #e1e4ea;
-        border-radius: 12px;
-        box-shadow: 0px 2px 3px 0px rgba(5, 5, 6, 0.05);
-        padding: 24px;
-        min-height: 720px;
-        height: calc(100vh - 170px);
-        max-height: 960px;
-        overflow: auto;
-      }
+    .demo-notes code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      background: #f5f7fa;
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
 
-      #status {
-        font-size: 13px;
-        padding: 8px 16px;
-        border-radius: 6px;
-        margin: 12px 24px;
-        display: none;
-      }
+    #app-root {
+      max-width: 1400px;
+      margin: 24px auto;
+      background: transparent;
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+      padding: 0;
+      min-height: 720px;
+      height: calc(100vh - 170px);
+      max-height: 960px;
+      overflow: auto;
+    }
 
-      #status.error {
-        display: block;
-        background: #fef2f2;
-        color: #9f0712;
-        border: 1px solid #ffc9c9;
-      }
+    #status {
+      font-size: 13px;
+      padding: 8px 16px;
+      border-radius: 6px;
+      margin: 12px 24px;
+      display: none;
+    }
 
-      #status.success {
-        display: block;
-        background: #f0fdf4;
-        color: #016630;
-        border: 1px solid #b9f8cf;
-      }
+    #status.error {
+      display: block;
+      background: #fef2f2;
+      color: #9f0712;
+      border: 1px solid #ffc9c9;
+    }
 
-      #status.info {
-        display: block;
-        background: #eff6ff;
-        color: #1447e6;
-        border: 1px solid #bedbff;
-      }
-    </style>
-  </head>
+    #status.success {
+      display: block;
+      background: #f0fdf4;
+      color: #016630;
+      border: 1px solid #b9f8cf;
+    }
 
-  <body>
-    <header>
-      <h1>Superposition Embeddable UI Demo</h1>
-      <span class="badge">Embeddable Component</span>
-    </header>
-    <div id="demo-root"></div>
+    #status.info {
+      display: block;
+      background: #eff6ff;
+      color: #1447e6;
+      border: 1px solid #bedbff;
+    }
+  </style>
+</head>
 
-    <script type="module" src="./main.tsx"></script>
-  </body>
+<body>
+  <header>
+    <h1>Superposition Embeddable UI Demo</h1>
+    <span class="badge">Embeddable Component</span>
+  </header>
+  <div id="demo-root"></div>
+
+  <script type="module" src="./main.tsx"></script>
+</body>
+
 </html>

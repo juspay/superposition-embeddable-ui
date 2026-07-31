@@ -1,27 +1,44 @@
-import { useCallback, useMemo, useState } from "react";
 import {
-  buttonDanger,
-  buttonPrimary,
-  buttonSecondary,
+  Button,
+  ButtonSize,
+  ButtonType,
+  Tag,
+  TagColor,
+  TagShape,
+  TagSize,
+  TagVariant,
+} from "@juspay/blend-design-system";
+import { Plus, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import "../blend-react-compat";
+import {
   FormField,
+  InlineNotice,
   inputStyle,
   JsonViewer,
   Modal,
-  Pagination,
-  resolveTableSerialNumberProps,
-  SearchField,
+  PageHeader,
+  resolveTableSearchAlign,
   Table,
 } from "../components";
-import type { Column } from "../components/Table";
 import { useApi, useMutation } from "../hooks/useApi";
 import { useAlerts } from "../providers/AlertProvider";
 import { useSuperposition } from "../providers/SuperpositionUIProvider";
 import type { CreateDefaultConfigRequest, DefaultConfig, JsonValue } from "../types";
-import { matchesPrefix, normalizeFilterValues } from "../utils";
+import {
+  matchesPrefix,
+  matchesSearchQuery,
+  normalizeFilterValues,
+  paginateRows,
+} from "../utils";
+import { formatErrorMessage } from "../utils/errors";
+import { ConfigDetailPage } from "./ConfigDetailPage";
 import {
   canUseFeatureAction,
   FeatureUnavailable,
   getMessage,
+  isFeatureDetailPageEnabled,
+  isFeatureEditable,
   isFeatureEnabled,
 } from "./FeatureGate";
 
@@ -34,34 +51,196 @@ export interface ConfigManagerProps {
   showResolvedValues?: boolean;
   /** Allow create/delete controls for default configs. Defaults to view-only. */
   editable?: boolean;
+  /** Allow clicking a row to open the single default config detail page. Defaults to enabled. */
+  enableDetailPage?: boolean;
 }
 
-function applyResolvedValues(
-  rows: DefaultConfig[],
-  resolvedValues?: Record<string, JsonValue>,
-): DefaultConfig[] {
-  if (!resolvedValues) return rows;
+function formatPrimitive(value: JsonValue): string {
+  if (typeof value === "string") return JSON.stringify(value);
+  if (typeof value === "number" || typeof value === "boolean" || value === null) {
+    return String(value);
+  }
+  return JSON.stringify(value) ?? String(value);
+}
 
-  return rows.map((row) =>
-    Object.prototype.hasOwnProperty.call(resolvedValues, row.key)
-      ? { ...row, value: resolvedValues[row.key] }
-      : row,
+function truncatePreview(preview: string, maxLength: number, closing = ""): string {
+  if (preview.length <= maxLength) return preview;
+
+  const suffix = closing ? `...${closing}` : "...";
+  return `${preview.slice(0, Math.max(0, maxLength - suffix.length))}${suffix}`;
+}
+
+function compactJsonPreview(value: JsonValue, maxLength = 76): string {
+  let preview: string;
+  let closing = "";
+
+  if (Array.isArray(value)) {
+    if (value.length === 0) {
+      preview = "[]";
+    } else {
+      const visible = value.slice(0, 3).map((item) => formatPrimitive(item as JsonValue));
+      preview = `[ ${visible.join(", ")}${value.length > visible.length ? ", ..." : ""}]`;
+    }
+    closing = "]";
+  } else if (value && typeof value === "object") {
+    const entries = Object.entries(value as Record<string, JsonValue>);
+    const visible = entries
+      .slice(0, 3)
+      .map(([key, entry]) => `${JSON.stringify(key)}: ${formatPrimitive(entry)}`);
+    preview = `{ ${visible.join(", ")}${entries.length > visible.length ? ", ..." : ""} }`;
+    closing = "}";
+  } else {
+    preview = formatPrimitive(value);
+  }
+
+  return truncatePreview(preview, maxLength, closing);
+}
+
+function prettyJson(value: unknown): string {
+  return JSON.stringify(value, null, 2) ?? String(value);
+}
+
+function ConfigKeyPill({ value }: { value: string }) {
+  return (
+    <span className="sp-config-key-pill" title={value}>
+      <span>{value}</span>
+    </span>
+  );
+}
+
+function ValueCell({
+  value,
+  onOpen,
+}: {
+  value: JsonValue;
+  onOpen: (title: string, value: JsonValue) => void;
+}) {
+  const preview = compactJsonPreview(value, 42);
+  const isInspectable =
+    Array.isArray(value) ||
+    (value !== null && typeof value === "object") ||
+    preview.length >= 41;
+
+  return (
+    <button
+      type="button"
+      title={prettyJson(value)}
+      onClick={(event) => {
+        if (!isInspectable) return;
+
+        event.stopPropagation();
+        onOpen("Resolved Value", value);
+      }}
+      style={{
+        border: 0,
+        padding: 0,
+        background: "none",
+        color: "inherit",
+        font: "inherit",
+        cursor: isInspectable ? "pointer" : "default",
+        textAlign: "left",
+      }}
+    >
+      <Tag
+        text={preview}
+        color={TagColor.SUCCESS}
+        variant={TagVariant.SUBTLE}
+        size={TagSize.SM}
+        shape={TagShape.SQUARICAL}
+        maxWidth="min(100%, 320px)"
+      />
+    </button>
+  );
+}
+
+function SchemaCell({
+  schema,
+  onOpen,
+}: {
+  schema: DefaultConfig["schema"];
+  onOpen: () => void;
+}) {
+  const preview = compactJsonPreview(schema as JsonValue, 42);
+
+  return (
+    <button
+      type="button"
+      onClick={(event) => {
+        event.stopPropagation();
+        onOpen();
+      }}
+      title={prettyJson(schema)}
+      style={{
+        border: 0,
+        padding: 0,
+        background: "none",
+        color: "inherit",
+        font: "inherit",
+        cursor: "pointer",
+        textAlign: "left",
+      }}
+    >
+      <Tag
+        text={preview}
+        color={TagColor.NEUTRAL}
+        variant={TagVariant.SUBTLE}
+        size={TagSize.SM}
+        shape={TagShape.SQUARICAL}
+        maxWidth="min(100%, 360px)"
+      />
+    </button>
+  );
+}
+
+function DescriptionText({ value }: { value?: string | null }) {
+  const description = value || "No description";
+
+  return (
+    <span
+      title={description}
+      style={{
+        display: "-webkit-box",
+        maxWidth: 360,
+        overflow: "hidden",
+        color: value ? "var(--sp-color-text)" : "var(--sp-color-muted)",
+        fontSize: "0.85rem",
+        fontWeight: 450,
+        lineHeight: 1.45,
+        WebkitBoxOrient: "vertical",
+        WebkitLineClamp: 2,
+      }}
+    >
+      {description}
+    </span>
   );
 }
 
 function ConfigManagerContent({
-  pageSize = 20,
+  pageSize = 10,
   prefix,
   showResolvedValues = true,
-  editable = false,
+  editable,
+  enableDetailPage,
 }: ConfigManagerProps) {
   const { config, defaultConfigs, resolve, scope } = useSuperposition();
   const { addAlert, confirmAction } = useAlerts();
   const [page, setPage] = useState(1);
+  const [currentPageSize, setCurrentPageSize] = useState(pageSize);
   const [search, setSearch] = useState("");
   const [showCreate, setShowCreate] = useState(false);
-  const canCreate = editable && canUseFeatureAction(config, "config", "create");
-  const canDelete = editable && canUseFeatureAction(config, "config", "delete");
+  const [selectedConfigKey, setSelectedConfigKey] = useState<string | null>(null);
+  const [detailsModal, setDetailsModal] = useState<{
+    title: string;
+    value: unknown;
+  } | null>(null);
+  const isEditable = isFeatureEditable(config, "config", editable);
+  const detailPageEnabled = isFeatureDetailPageEnabled(
+    config,
+    "config",
+    enableDetailPage,
+  );
+  const canCreate = isEditable && canUseFeatureAction(config, "config", "create");
+  const canDelete = isEditable && canUseFeatureAction(config, "config", "delete");
   const prefixes = useMemo(
     () => normalizeFilterValues(prefix ?? config.filters?.defaultConfigPrefix),
     [config.filters?.defaultConfigPrefix, prefix],
@@ -71,19 +250,10 @@ function ConfigManagerContent({
 
   const { data, loading, error, refetch } = useApi(
     () =>
-      defaultConfigs.list(
-        { page, count: pageSize },
-        { name: search || undefined, prefix: prefixes },
-      ),
-    [defaultConfigs, page, pageSize, search, prefixes],
-  );
-
-  const { data: resolvedValues } = useApi(
-    () =>
       showResolvedValues
-        ? resolve.resolve(resolvedContext)
-        : Promise.resolve({} as Record<string, JsonValue>),
-    [resolve, showResolvedValues, resolvedContextKey],
+        ? resolve.resolveDetailed(resolvedContext, { prefix: prefixes })
+        : defaultConfigs.list({ all: true }, { prefix: prefixes }),
+    [defaultConfigs, prefixes, resolve, showResolvedValues, resolvedContextKey],
   );
 
   // Create form state
@@ -198,9 +368,7 @@ function ConfigManagerContent({
     } catch (err) {
       addAlert(
         "error",
-        err instanceof Error
-          ? err.message
-          : createMutation.error || "Failed to create config",
+        formatErrorMessage(err, "Could not create config. Please try again."),
       );
     }
   };
@@ -218,134 +386,179 @@ function ConfigManagerContent({
     try {
       await deleteMutation.mutate(key);
       refetch();
-    } catch {
-      addAlert("error", deleteMutation.error || "Failed to delete config");
+    } catch (err) {
+      addAlert("error", formatErrorMessage(err, "Could not delete config."));
     }
   };
 
-  const columns: Column<DefaultConfig>[] = [
-    { key: "key", header: "Key", width: "25%" },
+  const filteredRows = useMemo(
+    () =>
+      (data?.data ?? [])
+        .filter((row) => matchesPrefix(row.key, prefixes))
+        .filter((row) => matchesSearchQuery([row.key], search)),
+    [data?.data, prefixes, search],
+  );
+  const paginatedRows = useMemo(
+    () => paginateRows(filteredRows, page, currentPageSize),
+    [filteredRows, page, currentPageSize],
+  );
+  const rows = paginatedRows;
+  const hasRows = rows.length > 0;
+  const totalItems = filteredRows.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / currentPageSize));
+  const startItem = hasRows ? (page - 1) * currentPageSize + 1 : 0;
+  const pageOptions = Array.from(new Set([pageSize, 10, 20, 50])).sort(
+    (left, right) => left - right,
+  );
+  const searchAlign = resolveTableSearchAlign(config.table, "config");
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
+  const configColumns = [
+    {
+      key: "key",
+      header: "Key",
+      width: "18%",
+      render: (row: DefaultConfig) => <ConfigKeyPill value={row.key} />,
+    },
     {
       key: "value",
       header: showResolvedValues ? "Resolved Value" : "Value",
-      width: "25%",
-      render: (row) => <JsonViewer data={row.value} />,
+      width: "28%",
+      render: (row: DefaultConfig) => (
+        <ValueCell
+          value={row.value}
+          onOpen={(title, value) => setDetailsModal({ title, value })}
+        />
+      ),
     },
     {
       key: "schema",
       header: "Schema",
-      width: "20%",
-      render: (row) => <JsonViewer data={row.schema} />,
+      width: "22%",
+      render: (row: DefaultConfig) => (
+        <SchemaCell
+          schema={row.schema}
+          onOpen={() =>
+            setDetailsModal({ title: `Schema for ${row.key}`, value: row.schema })
+          }
+        />
+      ),
     },
-    { key: "description", header: "Description", width: "20%" },
     {
-      key: "actions",
-      header: "",
-      width: "10%",
-      render: (row) =>
-        !canDelete ? null : (
-          <button
-            style={buttonDanger}
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDelete(row.key);
-            }}
-          >
-            Delete
-          </button>
-        ),
+      key: "description",
+      header: "Description",
+      width: canDelete ? "32%" : "36%",
+      render: (row: DefaultConfig) => (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 10,
+          }}
+        >
+          <DescriptionText value={row.description} />
+          {canDelete && (
+            <Button
+              type="button"
+              buttonType={ButtonType.DANGER}
+              size={ButtonSize.SMALL}
+              text="Delete"
+              leadingIcon={<Trash2 aria-hidden="true" size={14} />}
+              onClick={(event) => {
+                event?.stopPropagation();
+                handleDelete(row.key);
+              }}
+            />
+          )}
+        </div>
+      ),
     },
   ];
 
-  const rows = applyResolvedValues(
-    (data?.data ?? []).filter((row) => matchesPrefix(row.key, prefixes)),
-    showResolvedValues ? (resolvedValues ?? undefined) : undefined,
-  );
-  const hasRows = rows.length > 0;
-  const serialNumberProps = resolveTableSerialNumberProps(
-    config.table,
-    (page - 1) * pageSize + 1,
-  );
+  if (detailPageEnabled && selectedConfigKey) {
+    return (
+      <ConfigDetailPage
+        configKey={selectedConfigKey}
+        backLabel="Back to configs"
+        onBack={() => setSelectedConfigKey(null)}
+      />
+    );
+  }
 
   return (
-    <div style={{ display: "grid", gap: 20 }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          gap: 16,
-          flexWrap: "wrap",
-        }}
-      >
-        <h2
-          style={{
-            margin: "var(--sp-page-title-margin)",
-            fontSize: "var(--sp-page-title-font-size)",
-            lineHeight: 1.08,
-            fontWeight: "var(--sp-page-title-font-weight)",
-            color: "var(--sp-page-title-text)",
-          }}
-        >
-          Configs
-        </h2>
-        {canCreate && (
-          <button style={buttonPrimary} onClick={() => setShowCreate(true)}>
-            {getMessage(config, "config.create", "Create config")}
-          </button>
-        )}
-      </div>
+    <div className="sp-section-stack">
+      <PageHeader
+        title="Configs"
+        description="Manage default configuration values and schemas."
+        actions={
+          canCreate ? (
+            <Button
+              buttonType={ButtonType.PRIMARY}
+              size={ButtonSize.MEDIUM}
+              text={getMessage(config, "config.create", "Create config")}
+              leadingIcon={<Plus aria-hidden="true" size={16} />}
+              onClick={() => setShowCreate(true)}
+            />
+          ) : undefined
+        }
+      />
 
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          flexWrap: "wrap",
-        }}
-      >
-        <SearchField
-          placeholder="Search by key"
-          value={search}
-          onChange={(nextSearch) => {
+      <div className="sp-section-stack sp-config-layout">
+        {error && (
+          <InlineNotice
+            title="Could not load configs"
+            description={error}
+            tone="danger"
+          />
+        )}
+
+        <Table
+          className="sp-table-search-align"
+          searchAlign={searchAlign}
+          columns={configColumns}
+          data={rows}
+          keyExtractor={(row) => row.key}
+          loading={loading}
+          showSerialNumber
+          serialNumberHeader="S.No"
+          serialNumberStart={startItem || 1}
+          searchPlaceholder="Search by key"
+          onSearchChange={(nextSearch) => {
             setSearch(nextSearch);
             setPage(1);
           }}
+          pagination={{
+            currentPage: page,
+            pageSize: currentPageSize,
+            totalRows: totalItems,
+            pageSizeOptions: pageOptions,
+          }}
+          onPageChange={setPage}
+          onPageSizeChange={(nextPageSize) => {
+            setCurrentPageSize(nextPageSize);
+            setPage(1);
+          }}
+          onRowClick={
+            detailPageEnabled ? (row) => setSelectedConfigKey(row.key) : undefined
+          }
+          tableBodyHeight="min(668px, 65vh)"
         />
       </div>
 
-      {error && (
-        <div
-          style={{
-            marginBottom: 12,
-            padding: "10px 12px",
-            borderRadius: "var(--sp-inline-radius)",
-            background: "var(--sp-feedback-danger-bg)",
-            border: "1px solid var(--sp-feedback-danger-border)",
-            color: "var(--sp-feedback-danger-text)",
-            fontSize: 13,
-          }}
-        >
-          Failed to load configs: {error}
-        </div>
-      )}
-
-      <Table
-        columns={columns}
-        data={loading ? [] : rows}
-        keyExtractor={(r) => r.key}
-        loading={loading}
-        emptyMessage="No configs found"
-        {...serialNumberProps}
-      />
-
-      {data && hasRows && (
-        <Pagination
-          currentPage={page}
-          totalPages={data.total_pages}
-          onPageChange={setPage}
-        />
-      )}
+      <Modal
+        open={Boolean(detailsModal)}
+        onClose={() => setDetailsModal(null)}
+        title={detailsModal?.title ?? "Details"}
+        width="min(720px, calc(100vw - 32px))"
+        maxWidth="720px"
+      >
+        <JsonViewer data={detailsModal?.value} collapsed={false} />
+      </Modal>
 
       <Modal
         open={showCreate}
@@ -353,20 +566,20 @@ function ConfigManagerContent({
         title="Create Default Config"
         footer={
           <>
-            <button style={buttonSecondary} onClick={() => setShowCreate(false)}>
-              Cancel
-            </button>
-            <button
-              style={{
-                ...buttonPrimary,
-                opacity: createDisabled ? 0.55 : 1,
-                cursor: createDisabled ? "not-allowed" : "pointer",
-              }}
+            <Button
+              buttonType={ButtonType.SECONDARY}
+              size={ButtonSize.MEDIUM}
+              text="Cancel"
+              onClick={() => setShowCreate(false)}
+            />
+            <Button
+              buttonType={ButtonType.PRIMARY}
+              size={ButtonSize.MEDIUM}
+              text={createMutation.loading ? "Creating..." : "Create"}
               onClick={handleCreate}
               disabled={createDisabled}
-            >
-              {createMutation.loading ? "Creating..." : "Create"}
-            </button>
+              loading={createMutation.loading}
+            />
           </>
         }
       >

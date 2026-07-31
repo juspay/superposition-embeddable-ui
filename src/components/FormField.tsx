@@ -1,5 +1,6 @@
-import React, { cloneElement, isValidElement, useId } from "react";
+import "../blend-react-compat";
 import { TextArea, TextInput, TextInputSize } from "@juspay/blend-design-system";
+import React, { cloneElement, isValidElement, useId } from "react";
 
 export interface FormFieldProps {
   label: string;
@@ -129,7 +130,7 @@ export function FormField({
 export const inputStyle: React.CSSProperties = {
   width: "100%",
   padding: "8px 12px",
-  border: "1px solid var(--sp-control-border)",
+  border: "1.5px solid var(--sp-control-border)",
   background: "var(--sp-control-bg)",
   color: "var(--sp-control-text)",
   borderRadius: "var(--sp-control-radius)",
@@ -143,12 +144,26 @@ export const buttonPrimary: React.CSSProperties = {
   padding: "var(--sp-button-padding)",
   background: "var(--sp-button-primary-bg)",
   color: "var(--sp-button-primary-text)",
-  border: "1px solid var(--sp-button-primary-border)",
+  border: "2px solid var(--sp-button-primary-border)",
   borderRadius: "var(--sp-button-radius)",
   fontSize: "var(--sp-button-font-size)",
   cursor: "pointer",
   fontWeight: "var(--sp-button-font-weight)",
-  boxShadow: "var(--sp-button-primary-shadow)",
+  boxShadow: "var(--sp-button-primary-shadow), var(--sp-shadow-sm)",
+  transition:
+    "box-shadow 180ms ease, background 180ms ease, border-color 180ms ease, transform 120ms ease",
+};
+
+export const createActionButtonStyle: React.CSSProperties = {
+  ...buttonPrimary,
+  minHeight: 42,
+  padding: "0 18px",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 8,
+  whiteSpace: "nowrap",
+  borderColor: "color-mix(in oklab, var(--sp-color-primary) 76%, var(--sp-color-border))",
 };
 
 export const buttonSecondary: React.CSSProperties = {
@@ -160,6 +175,21 @@ export const buttonSecondary: React.CSSProperties = {
   fontSize: "var(--sp-button-font-size)",
   cursor: "pointer",
   fontWeight: "var(--sp-button-font-weight)",
+  transition:
+    "box-shadow 180ms ease, background 180ms ease, border-color 180ms ease, transform 120ms ease",
+};
+
+export const exportActionButtonStyle: React.CSSProperties = {
+  ...buttonSecondary,
+  minHeight: 38,
+  padding: "0 14px",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 10,
+  borderRadius: "var(--sp-control-radius)",
+  fontWeight: 800,
+  whiteSpace: "nowrap",
 };
 
 export const buttonDanger: React.CSSProperties = {

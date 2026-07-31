@@ -1,3 +1,4 @@
+import { EmptyState } from "../components";
 import type {
   SuperpositionEmbeddableConfig,
   SuperpositionFeature,
@@ -16,11 +17,27 @@ export function canUseFeatureAction(
   feature: SuperpositionFeature,
   action: keyof SuperpositionFeatureCapabilities,
 ): boolean {
-  if (config.readOnly && action !== "execute") {
+  if (config.readOnly) {
     return false;
   }
 
-  return config.capabilities?.[feature]?.[action] ?? true;
+  return config.capabilities?.[feature]?.[action] ?? false;
+}
+
+export function isFeatureEditable(
+  config: SuperpositionEmbeddableConfig,
+  feature: SuperpositionFeature,
+  editable?: boolean,
+): boolean {
+  return editable ?? config.ui?.featureControls?.[feature]?.editable ?? false;
+}
+
+export function isFeatureDetailPageEnabled(
+  config: SuperpositionEmbeddableConfig,
+  feature: SuperpositionFeature,
+  enabled?: boolean,
+): boolean {
+  return enabled ?? config.ui?.featureControls?.[feature]?.detailPage ?? true;
 }
 
 export function getMessage(
@@ -45,19 +62,5 @@ export function FeatureUnavailable({
   feature: string;
   message?: string;
 }) {
-  return (
-    <div
-      role="status"
-      style={{
-        border: "1px solid var(--sp-color-border)",
-        borderRadius: "var(--sp-card-radius)",
-        background: "var(--sp-color-surface-muted)",
-        color: "var(--sp-color-muted)",
-        padding: "var(--sp-space-lg)",
-        fontSize: "1rem",
-      }}
-    >
-      {message ?? `${feature} is not enabled for this embed.`}
-    </div>
-  );
+  return <EmptyState title={message ?? `${feature} is not enabled for this embed.`} />;
 }

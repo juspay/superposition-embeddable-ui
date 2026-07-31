@@ -30,3 +30,38 @@ export function filterRecordByPrefix<T>(
     Object.entries(values).filter(([key]) => matchesPrefix(key, prefixes)),
   );
 }
+
+export function stringifySearchValue(value: unknown): string {
+  if (value === undefined || value === null) {
+    return "";
+  }
+
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
+export function matchesSearchQuery(values: unknown[], query: string): boolean {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!normalizedQuery) {
+    return true;
+  }
+
+  return values.some((value) =>
+    stringifySearchValue(value).toLowerCase().includes(normalizedQuery),
+  );
+}

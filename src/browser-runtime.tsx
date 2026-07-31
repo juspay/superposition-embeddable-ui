@@ -1,3 +1,5 @@
+import "./blend-react-compat";
+
 import React from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { AlertProvider, SuperpositionUIProvider } from "./providers";
@@ -13,7 +15,8 @@ export type FeatureName =
   | "admin"
   | "config-manager"
   | "override-manager"
-  | "dimension-manager";
+  | "dimension-manager"
+  | "audit-trail";
 
 type FeatureComponent<TProps extends object> =
   | React.ComponentType<TProps>
@@ -101,9 +104,9 @@ function parseConfigValue(element: HTMLElement): SuperpositionEmbeddableConfig |
     },
     theme: themeMode
       ? {
-        ...(typeof parsedConfig.theme === "object" ? parsedConfig.theme : {}),
-        mode: themeMode as "light" | "dark" | "system",
-      }
+          ...(typeof parsedConfig.theme === "object" ? parsedConfig.theme : {}),
+          mode: themeMode as "light" | "dark" | "system",
+        }
       : parsedConfig.theme,
   } as SuperpositionEmbeddableConfig;
 }

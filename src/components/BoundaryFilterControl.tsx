@@ -1,9 +1,11 @@
+import "../blend-react-compat";
+import { Button, ButtonSize, ButtonType } from "@juspay/blend-design-system";
 import { useMemo, useState } from "react";
 import { useSuperposition } from "../providers/SuperpositionUIProvider";
 import type { JsonValue } from "../types";
 import { normalizeFilterValues } from "../utils";
 import { ConditionBadges } from "./ConditionBadges";
-import { buttonPrimary, buttonSecondary, FormField, inputStyle } from "./FormField";
+import { FormField, inputStyle } from "./FormField";
 import { Modal } from "./Modal";
 
 type BoundaryContext = Record<string, JsonValue>;
@@ -72,11 +74,16 @@ export function BoundaryFilterControl() {
 
   return (
     <>
-      <button style={buttonSecondary} onClick={handleOpen}>
-        {scope.hasBoundaryContext
-          ? `Filter (${scope.lockedDimensions.length})`
-          : "Filter"}
-      </button>
+      <Button
+        buttonType={ButtonType.SECONDARY}
+        size={ButtonSize.SMALL}
+        text={
+          scope.hasBoundaryContext
+            ? `Filter (${scope.lockedDimensions.length})`
+            : "Filter"
+        }
+        onClick={handleOpen}
+      />
 
       {scope.effectiveContext && Object.keys(scope.effectiveContext).length > 0 && (
         <div
@@ -110,12 +117,12 @@ export function BoundaryFilterControl() {
               Boundary
             </div>
             {scope.hasBoundaryContext && (
-              <button
-                style={{ ...buttonSecondary, padding: "6px 10px", fontSize: 12 }}
+              <Button
+                buttonType={ButtonType.SECONDARY}
+                size={ButtonSize.SMALL}
+                text="Clear"
                 onClick={handleClear}
-              >
-                Clear
-              </button>
+              />
             )}
           </div>
           <ConditionBadges
@@ -131,23 +138,25 @@ export function BoundaryFilterControl() {
         title="Boundary Filter"
         footer={
           <>
-            <button style={buttonSecondary} onClick={() => setOpen(false)}>
-              Cancel
-            </button>
-            <button style={buttonSecondary} onClick={handleClear}>
-              Clear
-            </button>
-            <button
-              style={{
-                ...buttonPrimary,
-                opacity: parsedBoundary.error ? 0.55 : 1,
-                cursor: parsedBoundary.error ? "not-allowed" : "pointer",
-              }}
+            <Button
+              buttonType={ButtonType.SECONDARY}
+              size={ButtonSize.MEDIUM}
+              text="Cancel"
+              onClick={() => setOpen(false)}
+            />
+            <Button
+              buttonType={ButtonType.SECONDARY}
+              size={ButtonSize.MEDIUM}
+              text="Clear"
+              onClick={handleClear}
+            />
+            <Button
+              buttonType={ButtonType.PRIMARY}
+              size={ButtonSize.MEDIUM}
+              text="Apply"
               onClick={handleApply}
               disabled={Boolean(parsedBoundary.error)}
-            >
-              Apply
-            </button>
+            />
           </>
         }
       >

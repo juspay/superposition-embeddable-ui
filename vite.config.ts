@@ -2,6 +2,7 @@ import react from "@vitejs/plugin-react";
 import { resolve } from "path";
 import { defineConfig } from "vite";
 import dts from "vite-plugin-dts";
+import { isLibraryExternal } from "./vite.external";
 
 export default defineConfig({
   plugins: [
@@ -21,6 +22,7 @@ export default defineConfig({
       entry: {
         index: resolve(__dirname, "src/index.ts"),
         admin: resolve(__dirname, "src/admin.ts"),
+        "audit-trail": resolve(__dirname, "src/audit-trail.ts"),
         "config-manager": resolve(__dirname, "src/config-manager.ts"),
         "dimension-manager": resolve(__dirname, "src/dimension-manager.ts"),
         "override-manager": resolve(__dirname, "src/override-manager.ts"),
@@ -32,13 +34,18 @@ export default defineConfig({
       cssFileName: "styles",
     },
     rollupOptions: {
-      external: ["react", "react-dom", "react-dom/client", "react/jsx-runtime"],
+      external: isLibraryExternal,
       output: {
         globals: {
           react: "React",
           "react-dom": "ReactDOM",
           "react-dom/client": "ReactDOM",
           "react/jsx-runtime": "jsxRuntime",
+        },
+        manualChunks(id) {
+          return id.endsWith("/src/blend-react-compat.ts")
+            ? "blend-react-compat"
+            : undefined;
         },
       },
     },

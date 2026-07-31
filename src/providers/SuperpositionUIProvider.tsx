@@ -1,23 +1,26 @@
+import {
+  Theme as BlendTheme,
+  ThemeProvider as BlendThemeProvider,
+  FOUNDATION_THEME,
+  type ComponentTokenType as BlendComponentTokenType,
+  type ThemeType as BlendThemeType,
+} from "@juspay/blend-design-system";
 import React, {
   createContext,
   useCallback,
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
-import {
-  FOUNDATION_THEME,
-  Theme as BlendTheme,
-  ThemeProvider as BlendThemeProvider,
-  type ComponentTokenType as BlendComponentTokenType,
-  type ThemeType as BlendThemeType,
-} from "@juspay/blend-design-system";
+import { auditLogsApi } from "../api/audit-logs";
 import { SuperpositionClient } from "../api/client";
 import { defaultConfigsApi } from "../api/default-configs";
 import { dimensionsApi } from "../api/dimensions";
 import { overridesApi } from "../api/overrides";
 import { resolveApi } from "../api/resolve";
+import "../blend-react-compat";
 import type {
   JsonValue,
   SuperpositionEmbeddableConfig,
@@ -28,6 +31,27 @@ import type {
 import { getLockedDimensions, mergeScopedContext } from "../utils/context-filter";
 import { normalizeSuperpositionConfig } from "../utils/normalize-config";
 import { ThemeContext, type SuperpositionThemeValue } from "./theme-context";
+
+/**
+ * Defensive patch: Blend's DataTable registers a document-level click handler
+ * that calls `.closest()` on `event.target` without guarding against non-Element
+ * targets (e.g. Document, Window, text nodes). This adds a safe no-op `.closest()`
+ * to `EventTarget.prototype` so the call doesn't throw.
+ */
+if (typeof EventTarget !== "undefined" && !("closest" in EventTarget.prototype)) {
+  (EventTarget.prototype as EventTarget & { closest: () => null }).closest =
+    function closest() {
+      return null;
+    };
+}
+
+function markImplicitButtonsAsNonSubmit(root: HTMLElement | null) {
+  if (!root) return;
+
+  root.querySelectorAll<HTMLButtonElement>("button:not([type])").forEach((button) => {
+    button.type = "button";
+  });
+}
 
 export type BoundaryContext = Record<string, JsonValue>;
 
@@ -44,6 +68,7 @@ export interface SuperpositionScopeState {
 export interface SuperpositionContextValue {
   config: SuperpositionEmbeddableConfig;
   client: SuperpositionClient;
+  auditLogs: ReturnType<typeof auditLogsApi>;
   dimensions: ReturnType<typeof dimensionsApi>;
   defaultConfigs: ReturnType<typeof defaultConfigsApi>;
   overrides: ReturnType<typeof overridesApi>;
@@ -52,7 +77,7 @@ export interface SuperpositionContextValue {
 }
 
 const SuperpositionContext = createContext<SuperpositionContextValue | null>(null);
-const ignoreBoundaryContext = () => {};
+const ignoreBoundaryContext = () => { };
 
 function getSystemThemeMode(): Exclude<SuperpositionThemeMode, "system"> {
   if (
@@ -96,6 +121,17 @@ function deepMerge<T>(base: T, ...overrides: unknown[]): T {
   });
 
   return output as T;
+}
+
+function cssLength(value: unknown): string {
+  return typeof value === "number" ? `${value}px` : String(value);
+}
+
+function cssJustifyContentFromAlign(align?: "left" | "center" | "right") {
+  if (align === "center") return "center";
+  if (align === "right") return "flex-end";
+  if (align === "left") return "flex-start";
+  return undefined;
 }
 
 function buildBlendFoundationTokens(tokens?: SuperpositionThemeTokens): BlendThemeType {
@@ -164,6 +200,7 @@ function buildThemeVars(
   const table = tokens?.table;
   const tableHeader = table?.header;
   const button = tokens?.button;
+  const card = tokens?.card;
   const buttonPrimary = button?.primary;
   const buttonSecondary = button?.secondary;
   const buttonDanger = button?.danger;
@@ -188,6 +225,14 @@ function buildThemeVars(
   const pageTitle = tokens?.pageTitle;
   const jsonValue = tokens?.jsonValue;
   const tooltip = tokens?.tooltip;
+  const resolvedFontFamily =
+    typography?.fontFamily ??
+    'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif';
+  const resolvedHeadingFontFamily = resolvedFontFamily;
+  const resolvedFontSize = cssLength(typography?.fontSize ?? foundationFont.fontSize[14]);
+  const typographyLineHeight = (
+    typography as { lineHeight?: string | number } | undefined
+  )?.lineHeight;
 
   return {
     "--sp-color-bg":
@@ -223,6 +268,20 @@ function buildThemeVars(
       layout?.modalMinWidth ?? "min(400px, calc(100vw - (var(--sp-space-lg) * 2)))",
     "--sp-modal-max-width": layout?.modalMaxWidth ?? "600px",
     "--sp-modal-max-height": layout?.modalMaxHeight ?? "min(80vh, 720px)",
+    "--sp-override-editor-modal-width":
+      layout?.overrideEditorModalWidth ?? "min(840px, calc(100vw - 48px))",
+    "--sp-override-editor-modal-max-width":
+      layout?.overrideEditorModalMaxWidth ?? "860px",
+    "--sp-override-editor-modal-max-height":
+      layout?.overrideEditorModalMaxHeight ?? "min(88vh, 900px)",
+    "--sp-override-details-modal-width":
+      layout?.overrideDetailsModalWidth ?? "min(900px, calc(100vw - 32px))",
+    "--sp-override-details-modal-max-width":
+      layout?.overrideDetailsModalMaxWidth ?? "900px",
+    "--sp-override-details-modal-max-height":
+      layout?.overrideDetailsModalMaxHeight ?? "min(86vh, 860px)",
+    "--sp-override-list-gap": layout?.overrideListGap ?? "var(--sp-space-lg)",
+    "--sp-override-card-padding": layout?.overrideCardPadding ?? "14px 16px",
     "--sp-confirm-width":
       layout?.confirmWidth ?? "min(420px, calc(100vw - (var(--sp-space-lg) * 2)))",
     "--sp-alert-min-width":
@@ -233,6 +292,7 @@ function buildThemeVars(
     "--sp-compact-control-padding":
       layout?.compactControlPadding ?? "calc(var(--sp-space-xs) / 2) var(--sp-space-xs)",
     "--sp-color-surface-muted":
+      colors?.surfaceMuted ??
       "color-mix(in oklab, var(--sp-color-panel) 88%, var(--sp-color-bg))",
     "--sp-color-surface-subtle":
       "color-mix(in oklab, var(--sp-color-panel) 72%, var(--sp-color-bg))",
@@ -241,7 +301,15 @@ function buildThemeVars(
     "--sp-control-text": "var(--sp-color-text)",
     "--sp-control-border": "var(--sp-color-border)",
     "--sp-control-radius": "var(--sp-radius-md)",
-    "--sp-card-radius": "var(--sp-radius-lg)",
+    "--sp-card-bg": card?.bgColor ?? "var(--sp-color-panel)",
+    "--sp-card-border": card?.borderColor ?? "var(--sp-color-border)",
+    "--sp-card-radius": card?.borderRadius ?? "var(--sp-radius-lg)",
+    "--sp-card-shadow": card?.shadow ?? "var(--sp-shadow-sm)",
+    "--sp-card-padding": card?.padding ?? "18px",
+    "--sp-card-hover-border":
+      "color-mix(in oklab, var(--sp-color-primary) 14%, var(--sp-card-border))",
+    "--sp-card-hover-shadow":
+      "0 10px 24px color-mix(in oklab, var(--sp-color-text) 8%, transparent)",
     "--sp-inline-radius": "var(--sp-radius-sm)",
     "--sp-pill-radius": "999px",
     "--sp-table-header-bg":
@@ -261,7 +329,9 @@ function buildThemeVars(
     "--sp-button-primary-text":
       buttonPrimary?.textColor ?? button?.textColor ?? foundationColors.gray[0],
     "--sp-button-primary-border":
-      buttonPrimary?.borderColor ?? button?.borderColor ?? "transparent",
+      buttonPrimary?.borderColor ??
+      button?.borderColor ??
+      "color-mix(in oklab, var(--sp-color-primary) 72%, var(--sp-color-border))",
     "--sp-button-primary-shadow": buttonPrimary?.shadow ?? button?.shadow ?? "none",
     "--sp-button-secondary-bg":
       buttonSecondary?.bgColor ?? button?.bgColor ?? "var(--sp-color-panel)",
@@ -285,7 +355,7 @@ function buildThemeVars(
     "--sp-button-padding":
       button?.padding ?? `${foundationUnit[8]} ${foundationUnit[12]}`,
     "--sp-button-radius": button?.borderRadius ?? "var(--sp-control-radius)",
-    "--sp-button-font-size": button?.fontSize ?? foundationFont.fontSize[14],
+    "--sp-button-font-size": cssLength(button?.fontSize ?? foundationFont.fontSize[14]),
     "--sp-button-font-weight": button?.fontWeight ?? foundationFont.weight[500],
     "--sp-icon-size": icon?.size ?? foundationUnit[16],
     "--sp-icon-color": icon?.color ?? "var(--sp-color-muted)",
@@ -323,7 +393,8 @@ function buildThemeVars(
     "--sp-search-padding": search?.padding ?? "var(--sp-space-sm) var(--sp-space-md)",
     "--sp-search-width": search?.width ?? "min(360px, 100%)",
     "--sp-search-height": search?.height ?? "40px",
-    "--sp-search-font-size": search?.fontSize ?? foundationFont.fontSize[14],
+    "--sp-search-justify-content": cssJustifyContentFromAlign(search?.align),
+    "--sp-search-font-size": cssLength(search?.fontSize ?? foundationFont.fontSize[14]),
     "--sp-search-font-weight": search?.fontWeight ?? foundationFont.weight[400],
     "--sp-search-shadow": search?.shadow ?? "none",
     "--sp-search-opacity": search?.opacity ?? "1",
@@ -373,9 +444,11 @@ function buildThemeVars(
       "color-mix(in oklab, var(--sp-color-text) 18%, transparent)",
     "--sp-tooltip-radius": tooltip?.borderRadius ?? "var(--sp-inline-radius)",
     "--sp-tooltip-shadow": tooltip?.shadow ?? "var(--sp-shadow-sm)",
-    "--sp-tooltip-font-size": tooltip?.fontSize ?? foundationFont.fontSize[12],
+    "--sp-tooltip-font-size": cssLength(tooltip?.fontSize ?? foundationFont.fontSize[12]),
     "--sp-page-title-text": pageTitle?.textColor ?? "var(--sp-color-text)",
-    "--sp-page-title-font-size": pageTitle?.fontSize ?? foundationFont.fontSize[24],
+    "--sp-page-title-font-size": cssLength(
+      pageTitle?.fontSize ?? foundationFont.fontSize[32],
+    ),
     "--sp-page-title-font-weight": pageTitle?.fontWeight ?? foundationFont.weight[700],
     "--sp-page-title-margin": pageTitle?.margin ?? "0",
     "--sp-banner-bg":
@@ -392,8 +465,9 @@ function buildThemeVars(
       bannerWarning?.padding ??
       banner?.padding ??
       `${foundationUnit[12]} ${foundationUnit[14]}`,
-    "--sp-banner-font-size":
+    "--sp-banner-font-size": cssLength(
       bannerWarning?.fontSize ?? banner?.fontSize ?? foundationFont.fontSize[14],
+    ),
     "--sp-banner-font-weight":
       bannerWarning?.fontWeight ?? banner?.fontWeight ?? foundationFont.weight[500],
     "--sp-toast-bg": toast?.bgColor ?? "var(--sp-color-panel)",
@@ -423,12 +497,15 @@ function buildThemeVars(
     "--sp-feedback-info-text": "var(--sp-color-text)",
     "--sp-feedback-info-border":
       "color-mix(in oklab, var(--sp-color-primary) 24%, var(--sp-color-border))",
-    "--sp-feedback-success-bg":
-      "color-mix(in oklab, var(--sp-color-success) 14%, var(--sp-color-panel))",
-    "--sp-feedback-success-text":
-      "color-mix(in oklab, var(--sp-color-success) 72%, var(--sp-color-text))",
-    "--sp-feedback-success-border":
-      "color-mix(in oklab, var(--sp-color-success) 32%, var(--sp-color-border))",
+    "--sp-feedback-success-bg": isDark
+      ? foundationColors.green[950]
+      : foundationColors.green[50],
+    "--sp-feedback-success-text": isDark
+      ? foundationColors.green[300]
+      : foundationColors.green[700],
+    "--sp-feedback-success-border": isDark
+      ? foundationColors.green[800]
+      : foundationColors.green[200],
     "--sp-feedback-warning-bg":
       "color-mix(in oklab, var(--sp-color-warning) 18%, var(--sp-color-panel))",
     "--sp-feedback-warning-text":
@@ -446,11 +523,12 @@ function buildThemeVars(
     "--sp-feedback-neutral-text": "var(--sp-color-text)",
     "--sp-feedback-neutral-border":
       "color-mix(in oklab, var(--sp-color-muted) 22%, var(--sp-color-border))",
-    fontFamily:
-      typography?.fontFamily ??
-      foundationFont.family.body ??
-      'InterDisplay, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif',
-    fontSize: typography?.fontSize ?? foundationFont.fontSize[14],
+    "--sp-font-family": resolvedFontFamily,
+    "--sp-heading-font-family": resolvedHeadingFontFamily,
+    "--sp-font-size-base": resolvedFontSize,
+    "--sp-line-height-body": typographyLineHeight ?? "1.5",
+    fontFamily: "var(--sp-font-family)",
+    fontSize: "var(--sp-font-size-base)",
     color: "var(--sp-color-text)",
   } as React.CSSProperties;
 }
@@ -503,6 +581,7 @@ export function SuperpositionUIProvider({
   config,
   children,
 }: SuperpositionUIProviderProps) {
+  const rootRef = useRef<HTMLDivElement>(null);
   const normalizedConfig = useMemo(() => normalizeSuperpositionConfig(config), [config]);
   const [systemMode, setSystemMode] =
     useState<Exclude<SuperpositionThemeMode, "system">>(getSystemThemeMode);
@@ -548,6 +627,7 @@ export function SuperpositionUIProvider({
     return {
       config,
       client,
+      auditLogs: auditLogsApi(client),
       dimensions: dimensionsApi(client),
       defaultConfigs: defaultConfigsApi(client),
       overrides: overridesApi(client),
@@ -592,6 +672,38 @@ export function SuperpositionUIProvider({
   const blendTheme =
     themeValue.resolvedMode === "dark" ? BlendTheme.DARK : BlendTheme.LIGHT;
 
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return undefined;
+
+    markImplicitButtonsAsNonSubmit(root);
+
+    if (typeof MutationObserver === "undefined") {
+      return undefined;
+    }
+
+    const observer = new MutationObserver(() => {
+      markImplicitButtonsAsNonSubmit(root);
+    });
+
+    observer.observe(root, { childList: true, subtree: true });
+
+    return () => observer.disconnect();
+  }, []);
+
+  const handleRootClickCapture = useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+
+      const button = target.closest("button");
+      if (button instanceof HTMLButtonElement && !button.hasAttribute("type")) {
+        button.type = "button";
+      }
+    },
+    [],
+  );
+
   return (
     <SuperpositionContext.Provider value={value}>
       <ThemeContext.Provider value={themeValue}>
@@ -601,8 +713,10 @@ export function SuperpositionUIProvider({
           componentTokens={blendComponentTokens}
         >
           <div
+            ref={rootRef}
             className="sp-ui"
             data-sp-theme={themeValue.resolvedMode}
+            onClickCapture={handleRootClickCapture}
             style={themeStyles}
           >
             {children}

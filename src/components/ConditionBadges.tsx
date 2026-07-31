@@ -1,9 +1,10 @@
+import "../blend-react-compat";
 import {
-  Tag,
   TagColor,
   TagShape,
   TagSize,
   TagVariant,
+  Tag,
 } from "@juspay/blend-design-system";
 import type { Condition } from "../types";
 
@@ -61,83 +62,37 @@ export function ConditionBadges({
   }
 
   const badges = (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: showConjunction ? "column" : "row",
-        flexWrap: showConjunction ? "nowrap" : "wrap",
-        alignItems: showConjunction ? "flex-start" : "center",
-        gap: showConjunction ? 12 : 8,
-      }}
-    >
+    <div className="sp-condition-badges">
       {entries.map(([key, value]) => {
         const isLocked = lockedKeys.includes(key);
+        const formattedValue = formatConditionValue(value);
+
         return (
           <Tag
             key={key}
-            text={`${key} == ${formatConditionValue(value)}`}
-            variant={TagVariant.SUBTLE}
+            text={`${key} = ${formattedValue}`}
             color={isLocked ? TagColor.WARNING : TagColor.PRIMARY}
+            variant={TagVariant.SUBTLE}
             size={TagSize.SM}
             shape={TagShape.SQUARICAL}
             rightSlot={isLocked ? <LockIcon /> : undefined}
+            maxWidth="100%"
+            title={`${key} = ${formattedValue}`}
           />
         );
       })}
     </div>
   );
 
+  if (showConjunction && entries.length === 1) {
+    return <div className="sp-condition-single">{badges}</div>;
+  }
+
   if (showConjunction) {
     return (
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "var(--sp-space-md)",
-          minHeight: Math.max(entries.length * 42, 96),
-        }}
-      >
-        <div
-          style={{
-            position: "relative",
-            alignSelf: "stretch",
-            width: 72,
-            minHeight: 84,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <span
-            aria-hidden="true"
-            style={{
-              position: "absolute",
-              left: 32,
-              top: 4,
-              bottom: 4,
-              width: 12,
-              borderLeft: "2px solid var(--sp-color-border)",
-              borderTopLeftRadius: "var(--sp-inline-radius)",
-              borderBottomLeftRadius: "var(--sp-inline-radius)",
-            }}
-          />
-          <span
-            style={{
-              position: "relative",
-              padding: "5px 12px",
-              borderRadius: "var(--sp-pill-radius)",
-              background: "var(--sp-color-surface-muted)",
-              color: "var(--sp-color-text)",
-              fontSize: 14,
-              fontWeight: 700,
-              lineHeight: 1.2,
-              zIndex: 1,
-            }}
-          >
-            And
-          </span>
-        </div>
-        <div style={{ display: "grid", gap: 12 }}>{badges}</div>
+      <div className="sp-condition-tree">
+        <span className="sp-condition-tree__conjunction">And</span>
+        {badges}
       </div>
     );
   }

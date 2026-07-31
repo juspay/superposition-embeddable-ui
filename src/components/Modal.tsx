@@ -1,3 +1,4 @@
+import "../blend-react-compat";
 import React from "react";
 import { Modal as BlendModal } from "@juspay/blend-design-system";
 import {
@@ -12,17 +13,30 @@ export interface ModalProps {
   title: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
+  width?: string;
+  maxWidth?: string;
+  maxHeight?: string;
 }
 
 type BlendModalWithContainerEvents = React.ComponentType<
   React.ComponentProps<typeof BlendModal> & {
+    "data-sp-embed-modal"?: string;
     onClick?: React.MouseEventHandler<HTMLDivElement>;
   }
 >;
 
 const ClickableBlendModal = BlendModal as BlendModalWithContainerEvents;
 
-export function Modal({ open, onClose, title, children, footer }: ModalProps) {
+export function Modal({
+  open,
+  onClose,
+  title,
+  children,
+  footer,
+  width,
+  maxWidth,
+  maxHeight,
+}: ModalProps) {
   const context = useOptionalSuperposition();
   const ui = context?.config.ui;
   const themeStyles = useOptionalSuperpositionThemeStyles();
@@ -52,9 +66,10 @@ export function Modal({ open, onClose, title, children, footer }: ModalProps) {
       isCustom
       closeOnBackdropClick
       useDrawerOnMobile
+      data-sp-embed-modal="true"
       minWidth="var(--sp-modal-min-width)"
-      maxWidth="var(--sp-modal-max-width)"
-      maxHeight="var(--sp-modal-max-height)"
+      maxWidth={maxWidth ?? "var(--sp-modal-max-width)"}
+      maxHeight={maxHeight ?? "var(--sp-modal-max-height)"}
       onClick={(event) => {
         if (event.target === event.currentTarget) {
           onClose();
@@ -66,15 +81,19 @@ export function Modal({ open, onClose, title, children, footer }: ModalProps) {
         data-sp-theme={theme?.resolvedMode}
         style={{
           ...themeStyles,
-          width: "var(--sp-modal-width)",
-          maxWidth: "var(--sp-modal-max-width)",
-          maxHeight: "var(--sp-modal-max-height)",
+          width: width ?? "var(--sp-modal-width)",
+          maxWidth: maxWidth ?? "var(--sp-modal-max-width)",
+          maxHeight: maxHeight ?? "var(--sp-modal-max-height)",
           display: "flex",
           flexDirection: "column",
+          minHeight: 0,
+          overflow: "hidden",
           background: "var(--sp-color-panel)",
         }}
       >
-        <div style={{ padding: 24, overflowY: "auto", flex: 1 }}>{children}</div>
+        <div style={{ padding: 24, overflowY: "auto", flex: 1, minHeight: 0 }}>
+          {children}
+        </div>
         {footer && (
           <div
             style={{

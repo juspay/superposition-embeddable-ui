@@ -1,6 +1,7 @@
 import react from "@vitejs/plugin-react";
 import { resolve } from "path";
 import { defineConfig } from "vite";
+import { isLibraryExternal } from "./vite.external";
 
 export default defineConfig({
   plugins: [react()],
@@ -13,7 +14,7 @@ export default defineConfig({
       fileName: (format) => `browser.${format === "es" ? "js" : "cjs"}`,
     },
     rollupOptions: {
-      external: ["react", "react-dom", "react-dom/client", "react/jsx-runtime"],
+      external: isLibraryExternal,
       output: {
         globals: {
           react: "React",

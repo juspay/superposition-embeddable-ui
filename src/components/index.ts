@@ -1,4 +1,22 @@
 export { AlertBar } from "../providers/AlertProvider";
+export { BoundaryFilterControl } from "./BoundaryFilterControl";
+export {
+  DetailPair,
+  DetailStack,
+  InlineNotice,
+  MetaTag,
+  PageHeader,
+  Surface,
+  Toolbar,
+} from "./BlendLayout";
+export type {
+  DetailPairProps,
+  InlineNoticeProps,
+  MetaTagProps,
+  PageHeaderProps,
+  SurfaceProps,
+  ToolbarProps,
+} from "./BlendLayout";
 export { ConditionBadges } from "./ConditionBadges";
 export type { ConditionBadgesProps } from "./ConditionBadges";
 export { EmptyState } from "./EmptyState";
@@ -8,6 +26,8 @@ export {
   buttonDanger,
   buttonPrimary,
   buttonSecondary,
+  createActionButtonStyle,
+  exportActionButtonStyle,
   inputStyle,
 } from "./FormField";
 export type { FormFieldProps } from "./FormField";
@@ -17,6 +37,17 @@ export { Modal } from "./Modal";
 export type { ModalProps } from "./Modal";
 export { Pagination } from "./Pagination";
 export type { PaginationProps } from "./Pagination";
+export {
+  CopyableJsonField,
+  ReadonlyValueField,
+  RecordDetailHeader,
+  RecordMetadataSummary,
+} from "./RecordDetail";
+export type {
+  CopyableJsonFieldProps,
+  RecordDetailHeaderProps,
+  RecordMetadataSummaryProps,
+} from "./RecordDetail";
 export { ScopedContextEditor } from "./ScopedContextEditor";
 export type { ScopedContextEditorProps } from "./ScopedContextEditor";
 export { SearchField } from "./SearchField";
@@ -26,7 +57,12 @@ export {
   defaultEntryFromSchema,
 } from "./StructuredContextOverrideForm";
 export type { FieldEntryState } from "./StructuredContextOverrideForm";
-export { resolveTableSerialNumberProps, Table } from "./Table";
+export {
+  resolveTableSearchAlign,
+  resolveTableSerialNumberProps,
+  searchAlignStyle,
+  Table,
+} from "./Table";
 export type { Column, TableProps, TableSerialNumberProps } from "./Table";
 export { Tooltip } from "./Tooltip";
 export type { TooltipProps } from "./Tooltip";
