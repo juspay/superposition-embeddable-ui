@@ -2,6 +2,10 @@
 
 This package is distributed through this repository's GitHub Releases.
 
+## 0.1.5
+
+- Aligned detail pages with the full-width layout used across the embeddable UI.
+
 ## 0.1.4
 
 - Removed local npm cache files from the repository.

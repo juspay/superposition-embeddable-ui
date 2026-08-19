@@ -1,6 +1,6 @@
 {
   "name": "superposition-embeddable-ui",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Embeddable React UI for Superposition",
   "repository": {
     "type": "git",
