@@ -132,14 +132,12 @@
 }
 
 .sp-ui .sp-detail-page {
-  width: min(1120px, 100%);
+  width: 100%;
   display: grid;
   gap: var(--sp-space-md);
-  margin: 0 auto;
 }
 
 .sp-ui .sp-record-detail-page {
-  width: min(1240px, 100%);
   gap: 18px;
 }
 
@@ -1052,11 +1050,9 @@
 }
 
 .sp-ui .sp-audit-detail-page {
-  width: min(1120px, 100%);
+  width: 100%;
   display: grid;
   gap: var(--sp-space-md);
-  margin: 0 auto;
-  padding: var(--sp-space-sm);
 }
 
 .sp-ui .sp-audit-detail-card-shell {
@@ -1340,10 +1336,6 @@
 }
 
 @media (max-width: 760px) {
-  .sp-ui .sp-audit-detail-page {
-    padding: 0;
-  }
-
   .sp-ui .sp-audit-summary-grid,
   .sp-ui .sp-audit-snapshot-grid {
     grid-template-columns: 1fr;
