@@ -43,7 +43,7 @@ npm pack
 That produces a tarball your friend can install with:
 
 ```bash
-npm install https://github.com/juspay/superposition-embeddable-ui/releases/download/v0.1.6/superposition-embeddable-ui-0.1.6.tgz
+npm install https://github.com/juspay/superposition-embeddable-ui/releases/download/v0.1.7/superposition-embeddable-ui-0.1.7.tgz
 ```
 
 ## What a host app supplies

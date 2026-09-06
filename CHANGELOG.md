@@ -2,6 +2,11 @@
 
 This package is distributed through this repository's GitHub Releases.
 
+## 0.1.7
+
+- Fixed the plain-browser bundles: `superposition-browser-core.global.external.js` threw `require is not defined` and never defined `SuperpositionBrowserCore`, so every feature global reported that it was unavailable. React's CommonJS JSX runtime is no longer bundled into the IIFE builds; they use a `createElement` shim against the host's React global instead.
+- Added a build-time check that loads every `*.global.external.js` bundle and fails the build if one throws or does not define its global.
+
 ## 0.1.6
 
 - Added the embeddable experiment manager: experiment list, detail, variants, and results views, with `superposition-embeddable-ui/experiment-manager` and browser globals.

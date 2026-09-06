@@ -1,6 +1,6 @@
 {
   "name": "superposition-embeddable-ui",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Embeddable React UI for Superposition",
   "repository": {
     "type": "git",
@@ -92,7 +92,7 @@
     "build:browser:shared-core": "vite build --config vite.cdn.core.external.config.ts",
     "build:browser:all-in-one-global": "vite build --config vite.cdn.external.config.ts",
     "build:browser:feature-globals": "node ./scripts/build-feature-globals.mjs",
-    "build": "npm run clean && npm run build:types && npm run build:package && npm run build:browser && npm run build:browser:local-react-assets && npm run build:browser:shared-core && npm run build:browser:all-in-one-global && npm run build:browser:feature-globals",
+    "build": "npm run clean && npm run build:types && npm run build:package && npm run build:browser && npm run build:browser:local-react-assets && npm run build:browser:shared-core && npm run build:browser:all-in-one-global && npm run build:browser:feature-globals && npm run validate:global-bundles",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -101,6 +101,7 @@
     "format:check": "prettier --check 'src/**/*.{ts,tsx}' '__tests__/**/*.{ts,tsx}'",
     "typecheck": "tsc --noEmit",
     "validate:react-compat": "node ./scripts/validate-react-compat.mjs",
+    "validate:global-bundles": "node ./scripts/validate-global-bundles.mjs",
     "demo": "vite dev --config demo/vite.config.ts --open demo/index.html",
     "demo:shared-core": "npm run build && vite dev --config demo/vite.config.ts --open demo/shared-core-feature-globals.html"
   },
