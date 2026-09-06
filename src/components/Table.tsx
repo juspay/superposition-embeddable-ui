@@ -50,6 +50,7 @@ export interface TableProps<T> {
   columnManagerAlwaysSelected?: string[];
   tableBodyHeight?: string;
   searchAlign?: SuperpositionSearchAlign;
+  compact?: boolean;
 }
 
 export type TableSerialNumberProps = Pick<
@@ -158,14 +159,41 @@ export function Table<T>({
   columnManagerAlwaysSelected,
   tableBodyHeight,
   searchAlign,
+  compact = false,
 }: TableProps<T>) {
   const shouldRenderAlignedSearch = Boolean(onSearchChange && searchAlign);
   const [alignedSearch, setAlignedSearch] = React.useState("");
+  const containerRef = React.useRef<HTMLDivElement>(null);
   const shouldShowToolbar = Boolean(
     (!shouldRenderAlignedSearch && onSearchChange) || headerSlot1 || headerSlot2,
   );
   const shouldShowHeader = shouldShowToolbar;
   const shouldUsePaginationFallback = useResponsivePaginationFallback();
+
+  // Blend keeps every body cell at tabIndex -1 until one is clicked, so a
+  // clickable row cannot be reached with the keyboard at all. Turning the first
+  // cell of each row into a tab stop restores that entry point; from there
+  // Blend's own grid handler drives arrow-key navigation and Enter/Space
+  // activation of onRowClick.
+  React.useEffect(() => {
+    const container = containerRef.current;
+    if (!container || !onRowClick) return;
+
+    const markRowsFocusable = () => {
+      container.querySelectorAll<HTMLElement>("tbody tr[data-row-id]").forEach((row) => {
+        const firstCell = row.querySelector<HTMLElement>("[data-col-index]");
+        if (firstCell && firstCell.tabIndex !== 0) {
+          firstCell.tabIndex = 0;
+        }
+      });
+    };
+
+    markRowsFocusable();
+
+    const observer = new MutationObserver(markRowsFocusable);
+    observer.observe(container, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [onRowClick]);
 
   type TableRow = Record<string, unknown> & {
     __spId: string;
@@ -223,8 +251,16 @@ export function Table<T>({
     ),
   ];
 
+  const wrapperClassName =
+    [className, compact ? "sp-table-compact" : null].filter(Boolean).join(" ") ||
+    undefined;
+
   return (
-    <div className={className} style={searchAlignStyle(searchAlign)}>
+    <div
+      ref={containerRef}
+      className={wrapperClassName}
+      style={searchAlignStyle(searchAlign)}
+    >
       {shouldRenderAlignedSearch ? (
         <div className="sp-table-search-row">
           <SearchField

@@ -917,6 +917,28 @@
   margin-bottom: 14px;
 }
 
+.sp-ui .sp-table-compact [role="columnheader"] {
+  padding: 4px 12px !important;
+}
+
+.sp-ui .sp-table-compact [role="gridcell"] {
+  padding: 6px 12px !important;
+  font-size: 0.8125rem !important;
+}
+
+/* Blend gives every body cell an inline min-height sized for the default
+   density, so compact rows only shrink once that is relaxed too. */
+.sp-ui .sp-table-compact [role="gridcell"] > div {
+  min-height: 34px !important;
+}
+
+/* Rows that are clickable are also keyboard reachable, so the focused cell
+   needs a visible ring - Blend sets `outline: none` inline on every cell. */
+.sp-ui [role="grid"] [role="gridcell"]:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--sp-color-primary) 55%, transparent) !important;
+  outline-offset: -2px;
+}
+
 [data-sp-embed-modal="true"] [data-element="body"] {
   overflow: hidden !important;
 }

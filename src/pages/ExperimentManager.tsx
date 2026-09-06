@@ -1650,6 +1650,7 @@ function ExperimentManagerContent({ pageSize = 20 }: ExperimentManagerProps) {
                     columns={resultColumns}
                     data={resultRows}
                     keyExtractor={(metric) => metric.name}
+                    compact
                   />
                 ) : null}
                 {experimentResults.note ? (
