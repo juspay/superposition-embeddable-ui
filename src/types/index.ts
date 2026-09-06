@@ -11,6 +11,7 @@ export const SUPERPOSITION_FEATURES = [
   "overrides",
   "dimensions",
   "audit",
+  "experiments",
 ] as const;
 
 export type SuperpositionFeature = (typeof SUPERPOSITION_FEATURES)[number];
@@ -20,6 +21,7 @@ export const SUPERPOSITION_FEATURE_LABELS: Record<SuperpositionFeature, string> 
   overrides: "Overrides",
   dimensions: "Dimensions",
   audit: "Audit Trail",
+  experiments: "Experiments",
 };
 
 export type RouteMode = "internal" | "external";
@@ -89,6 +91,19 @@ export interface SuperpositionFormThemeConfig extends SuperpositionStyleConfig {
   label?: SuperpositionStyleConfig;
   removeButton?: SuperpositionStyleConfig;
   helperTextColor?: string;
+}
+
+export interface SuperpositionExperimentMetricsThemeConfig extends SuperpositionStyleConfig {
+  labelColumnWidth?: string;
+  controlMaxWidth?: string;
+  helperTextColor?: string;
+  gap?: string;
+}
+
+/** Host styling for the experiment comparison surface and mobile viewport. */
+export interface SuperpositionExperimentComparisonThemeConfig extends SuperpositionStyleConfig {
+  deviceBorderRadius?: string;
+  deviceShadow?: string;
 }
 
 export interface SuperpositionDropdownThemeConfig extends SuperpositionStyleConfig {
@@ -224,6 +239,8 @@ export interface SuperpositionThemeTokens {
   jsonValue?: SuperpositionStyleConfig;
   tooltip?: SuperpositionStyleConfig;
   blend?: SuperpositionBlendThemeConfig;
+  experimentMetrics?: SuperpositionExperimentMetricsThemeConfig;
+  experimentComparison?: SuperpositionExperimentComparisonThemeConfig;
 }
 
 export interface SuperpositionThemeConfig extends SuperpositionThemeTokens {
@@ -283,6 +300,8 @@ export interface SuperpositionFeatureCapabilities {
   create?: boolean;
   update?: boolean;
   delete?: boolean;
+  execute?: boolean;
+  ramp?: boolean;
 }
 
 export type SuperpositionCapabilitiesConfig = Partial<
@@ -308,6 +327,136 @@ export interface SuperpositionLayoutConfig {
   tableMinWidth?: string;
   tableEmptyMinHeight?: string;
   compactControlPadding?: string;
+  experimentWizardMaxWidth?: string;
+}
+
+export interface SuperpositionExperimentVariantField {
+  key: string;
+  label: string;
+  type: "color" | "choice" | "text";
+  controlValue: string;
+  options?: Array<{ label: string; value: string }>;
+}
+
+export type SuperpositionExperimentTemplateKey =
+  | string
+  | (Pick<SuperpositionExperimentVariantField, "key"> &
+      Partial<Pick<SuperpositionExperimentVariantField, "label" | "type" | "options">>);
+
+export interface SuperpositionExperimentTemplate {
+  id: string;
+  label: string;
+  description?: string;
+  keys: SuperpositionExperimentTemplateKey[];
+  iconUrl?: string;
+  statusLabel?: string;
+  impactLabel?: string;
+  impactTone?: "info" | "success" | "warning";
+  disabled?: boolean;
+}
+
+/**
+ * Directional result for a single metric in an experiment.
+ * All values are supplied by the host's analytics service; the embed only renders them.
+ */
+export interface ExperimentMetricResult {
+  /** Metric identifier matching the experiment's configured metric name. */
+  name: string;
+  /** Display label. Falls back to the configured metric name when omitted. */
+  label?: string;
+  control: number;
+  variant: number;
+  /** Pre-formatted display values. When omitted the embed formats the raw numbers. */
+  controlDisplay?: string;
+  variantDisplay?: string;
+  /** Relative change as a ratio (0.12 = +12%). Used when `changeDisplay` is omitted. */
+  relativeChange?: number;
+  /** Pre-formatted change label (e.g. "+12.4%"). */
+  changeDisplay?: string;
+  /**
+   * Whether the change is favourable, accounting for metric directionality.
+   * `true` = favourable (green), `false` = unfavourable (red), `null`/`undefined` = neutral.
+   * The host computes this; the embed never infers favourability from the sign of the change.
+   */
+  favorable?: boolean | null;
+  /** Sample sizes, if the host tracks them. */
+  controlSampleSize?: number;
+  variantSampleSize?: number;
+}
+
+export type ExperimentResultsStatus = "collecting" | "available" | "no_data" | "error";
+
+/**
+ * The host-supplied analytics payload for one experiment. The embed renders this
+ * verbatim and never derives winners or significance on its own.
+ */
+export interface ExperimentResults {
+  status: ExperimentResultsStatus;
+  /**
+   * Outcome banner. `tone` drives the colour; `title`/`description` are host-authored.
+   * The embed never fabricates a winner — omit `banner` to show no banner.
+   */
+  banner?: {
+    tone: "success" | "warning" | "danger" | "info" | "neutral";
+    title: string;
+    description?: string;
+  } | null;
+  /** The primary metric highlighted as Control vs Variant cards. */
+  primaryMetric?: ExperimentMetricResult | null;
+  /** Full comparison table rows (primary + secondary + guardrail). */
+  metrics?: ExperimentMetricResult[];
+  /** Optional free-text note shown beneath the table (e.g. data freshness). */
+  note?: string;
+}
+
+export interface ExperimentResultsRequest {
+  experiment: import("./api").Experiment;
+  /** Headers the host should forward (auth, tenant, shop id, …). */
+  headers: Record<string, string>;
+  signal?: AbortSignal;
+}
+
+/**
+ * Host hook that resolves the analytics payload for an experiment.
+ * Either return the data directly, or point the embed at a URL it can fetch.
+ */
+export type ExperimentResultsSource =
+  | ((request: ExperimentResultsRequest) => Promise<ExperimentResults | null>)
+  | {
+      /** URL template; `{experimentId}` is replaced with the experiment id. */
+      url: string;
+      /** Map an arbitrary host response body to the results contract. */
+      transform?: (
+        body: unknown,
+        experiment: import("./api").Experiment,
+      ) => ExperimentResults | null;
+    };
+
+export interface SuperpositionExperimentManagerConfig {
+  variantFields?: SuperpositionExperimentVariantField[];
+  experimentTemplates?: SuperpositionExperimentTemplate[];
+  comparisonUrls?: string[];
+  comparisonBaseConfig?: Record<string, JsonValue>;
+  contextMode?: "editable" | "host-managed";
+  /** Show the metrics form independently of workspace enablement. Defaults to true.
+   * When false, skip the metrics step and explicitly disable experiment metrics.
+   */
+  showMetricsForm?: boolean;
+  disablePrimaryMetricSelection?: boolean;
+  disableSecondaryMetric?: boolean;
+  /** Hide guardrail selection and use the first workspace metric. Defaults to false. */
+  disableGuardrailMetric?: boolean;
+  /**
+   * Supplies the Results tab. When omitted the Results tab shows a
+   * "no analytics configured" empty state instead of fabricated data.
+   */
+  resultsSource?: ExperimentResultsSource;
+  /** Optional host-owned detail route; `{experimentId}` is replaced on row selection. */
+  detailUrlTemplate?: string;
+}
+
+export interface SuperpositionAssetsConfig {
+  emptyStateImageUrl?: string;
 }
 
 export interface SuperpositionNetworkHooks {
@@ -341,6 +490,8 @@ export interface SuperpositionEmbeddableConfig {
   table?: SuperpositionTableConfig;
   theme?: SuperpositionThemeConfig;
   layout?: SuperpositionLayoutConfig;
+  assets?: SuperpositionAssetsConfig;
+  experimentManager?: SuperpositionExperimentManagerConfig;
   ui?: SuperpositionUiAdapters;
   messages?: Record<string, string>;
 }

@@ -12,6 +12,7 @@ import {
 import { AuditTrail } from "./pages/AuditTrail";
 import { ConfigManager } from "./pages/ConfigManager";
 import { DimensionManager } from "./pages/DimensionManager";
+import { ExperimentManager } from "./pages/ExperimentManager";
 import { OverrideManager } from "./pages/OverrideManager";
 import { SuperpositionAdmin } from "./pages/SuperpositionAdmin";
 import type { SuperpositionEmbeddableConfig } from "./types";
@@ -24,6 +25,7 @@ const featureComponents = {
   "override-manager": OverrideManager,
   "dimension-manager": DimensionManager,
   "audit-trail": AuditTrail,
+  "experiment-manager": ExperimentManager,
 } satisfies Record<FeatureName, ComponentType<never>>;
 
 export const customElementTagNames = Object.fromEntries(

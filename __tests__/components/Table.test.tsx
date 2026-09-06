@@ -67,6 +67,64 @@ describe("Table", () => {
     expect(onClick).toHaveBeenCalledWith(data[0]);
   });
 
+  it("lets keyboard users reach and activate clickable rows", async () => {
+    const user = userEvent.setup();
+    const onClick = vi.fn();
+    render(
+      <Table
+        columns={columns}
+        data={data}
+        keyExtractor={(r) => r.id}
+        onRowClick={onClick}
+      />,
+    );
+
+    await user.tab();
+    expect(document.activeElement?.getAttribute("data-row-index")).toBe("0");
+
+    await user.keyboard("{Enter}");
+    expect(onClick).toHaveBeenCalledWith(data[0]);
+
+    await user.tab();
+    expect(document.activeElement?.getAttribute("data-row-index")).toBe("1");
+
+    await user.keyboard(" ");
+    expect(onClick).toHaveBeenLastCalledWith(data[1]);
+  });
+
+  it("leaves rows out of the tab order when they are not clickable", () => {
+    const { container } = render(
+      <Table columns={columns} data={data} keyExtractor={(r) => r.id} />,
+    );
+
+    expect(container.querySelectorAll('tbody [tabindex="0"]').length).toBe(0);
+  });
+
+  it("marks compact tables so the denser styles apply", () => {
+    const { container } = render(
+      <Table
+        columns={columns}
+        data={data}
+        keyExtractor={(r) => r.id}
+        className="sp-results-table"
+        compact
+      />,
+    );
+
+    expect(container.querySelector(".sp-results-table.sp-table-compact")).toBeTruthy();
+
+    // The compact rules override Blend's cell padding and the inline min-height
+    // it puts on the cell wrapper, so keep those hooks pinned to the real DOM.
+    const cellWrapper = container.querySelector<HTMLElement>(
+      '.sp-table-compact [role="gridcell"] > div',
+    );
+    expect(
+      container.querySelector('.sp-table-compact [role="columnheader"]'),
+    ).toBeTruthy();
+    expect(cellWrapper).toBeTruthy();
+    expect(cellWrapper?.style.minHeight).not.toBe("");
+  });
+
   it("renders a serial number column when enabled", () => {
     render(
       <Table

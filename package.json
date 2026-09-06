@@ -1,6 +1,6 @@
 {
   "name": "superposition-embeddable-ui",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Embeddable React UI for Superposition",
   "repository": {
     "type": "git",
@@ -61,6 +61,12 @@
       "import": "./dist/override-manager.js",
       "require": "./dist/override-manager.cjs",
       "default": "./dist/override-manager.js"
+    },
+    "./experiment-manager": {
+      "types": "./dist/experiment-manager.d.ts",
+      "import": "./dist/experiment-manager.js",
+      "require": "./dist/experiment-manager.cjs",
+      "default": "./dist/experiment-manager.js"
     },
     "./browser": {
       "types": "./dist/browser.d.ts",

@@ -74,6 +74,64 @@ export class SuperpositionClient {
     return headers;
   }
 
+  /**
+   * Headers the host can forward to its own backend (auth, tenant, workspace).
+   * Exposed so a `resultsSource` function can call the host API with the same
+   * identity the embed uses for Superposition calls.
+   */
+  getPublicHeaders(extra?: Record<string, string>): Record<string, string> {
+    return this.buildHeaders(extra);
+  }
+
+  /**
+   * Fetch an arbitrary host URL (same credentials + headers as Superposition
+   * calls, plus the configured request/response interceptors). Used by the
+   * URL-style `resultsSource`.
+   */
+  async getExternal<T>(
+    url: string,
+    options?: { headers?: Record<string, string>; signal?: AbortSignal },
+  ): Promise<T> {
+    const requestContext = this.config.network?.interceptRequest
+      ? await this.config.network.interceptRequest({
+          url,
+          init: {
+            method: "GET",
+            headers: this.buildHeaders(options?.headers),
+            credentials: this.config.transport.credentials ?? "include",
+            signal: options?.signal,
+          },
+        })
+      : {
+          url,
+          init: {
+            method: "GET",
+            headers: this.buildHeaders(options?.headers),
+            credentials: this.config.transport.credentials ?? "include",
+            signal: options?.signal,
+          },
+        };
+
+    const rawResponse = await fetch(requestContext.url, requestContext.init);
+    const response = this.config.network?.interceptResponse
+      ? await this.config.network.interceptResponse({
+          request: requestContext,
+          response: rawResponse,
+        })
+      : rawResponse;
+
+    if (!response.ok) {
+      const errorBody = await response.text().catch(() => "Unknown error");
+      throw new SuperpositionApiError(response.status, errorBody, requestContext.url);
+    }
+
+    if (response.status === 204 || response.headers.get("content-length") === "0") {
+      return undefined as T;
+    }
+
+    return response.json();
+  }
+
   private encodeQueryKey(key: string): string {
     return encodeURIComponent(key).replace(/%5B/g, "[").replace(/%5D/g, "]");
   }

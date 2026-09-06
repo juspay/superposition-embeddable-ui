@@ -141,6 +141,11 @@ export const inputStyle: React.CSSProperties = {
 };
 
 export const buttonPrimary: React.CSSProperties = {
+  whiteSpace: "nowrap",
+  height: "var(--sp-button-height)",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
   padding: "var(--sp-button-padding)",
   background: "var(--sp-button-primary-bg)",
   color: "var(--sp-button-primary-text)",
@@ -167,6 +172,11 @@ export const createActionButtonStyle: React.CSSProperties = {
 };
 
 export const buttonSecondary: React.CSSProperties = {
+  whiteSpace: "nowrap",
+  height: "var(--sp-button-height)",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
   padding: "var(--sp-button-padding)",
   background: "var(--sp-button-secondary-bg)",
   color: "var(--sp-button-secondary-text)",

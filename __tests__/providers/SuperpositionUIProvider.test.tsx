@@ -8,7 +8,7 @@ import {
 } from "../../src/providers/SuperpositionUIProvider";
 
 function TestConsumer() {
-  const { config, client, dimensions, defaultConfigs, overrides, scope } =
+  const { config, client, dimensions, defaultConfigs, overrides, experiments, scope } =
     useSuperposition();
   const theme = useSuperpositionTheme();
   const host = config.apiBaseUrl;
@@ -22,6 +22,7 @@ function TestConsumer() {
       <span data-testid="has-dims">{dimensions ? "yes" : "no"}</span>
       <span data-testid="has-configs">{defaultConfigs ? "yes" : "no"}</span>
       <span data-testid="has-overrides">{overrides ? "yes" : "no"}</span>
+      <span data-testid="has-experiments">{experiments ? "yes" : "no"}</span>
       <span data-testid="effective-scope">
         {JSON.stringify(scope.effectiveContext ?? null)}
       </span>
@@ -71,6 +72,7 @@ describe("SuperpositionUIProvider", () => {
     expect(screen.getByTestId("has-dims").textContent).toBe("yes");
     expect(screen.getByTestId("has-configs").textContent).toBe("yes");
     expect(screen.getByTestId("has-overrides").textContent).toBe("yes");
+    expect(screen.getByTestId("has-experiments").textContent).toBe("yes");
   });
 
   it("accepts the embeddable config contract", () => {
@@ -217,6 +219,7 @@ describe("SuperpositionUIProvider", () => {
             radius: { md: "9px" },
             spacing: { sm: "9px", md: "15px" },
             button: {
+              height: "42px",
               padding: "11px 17px",
               borderRadius: "10px",
               fontSize: "15px",
@@ -330,6 +333,7 @@ describe("SuperpositionUIProvider", () => {
     expect(themeRoot.style.getPropertyValue("--sp-button-primary-bg")).toBe("#7c3aed");
     expect(themeRoot.style.getPropertyValue("--sp-button-primary-text")).toBe("#f8fafc");
     expect(themeRoot.style.getPropertyValue("--sp-button-secondary-bg")).toBe("#f8fafc");
+    expect(themeRoot.style.getPropertyValue("--sp-button-height")).toBe("42px");
     expect(themeRoot.style.getPropertyValue("--sp-button-padding")).toBe("11px 17px");
     expect(themeRoot.style.getPropertyValue("--sp-button-radius")).toBe("10px");
     expect(themeRoot.style.getPropertyValue("--sp-table-opacity")).toBe("0.94");

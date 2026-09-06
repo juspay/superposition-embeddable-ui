@@ -16,7 +16,8 @@ export type FeatureName =
   | "config-manager"
   | "override-manager"
   | "dimension-manager"
-  | "audit-trail";
+  | "audit-trail"
+  | "experiment-manager";
 
 type FeatureComponent<TProps extends object> =
   | React.ComponentType<TProps>

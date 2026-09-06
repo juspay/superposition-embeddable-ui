@@ -10,6 +10,7 @@ const features = [
   "override-manager",
   "dimension-manager",
   "audit-trail",
+  "experiment-manager",
 ];
 
 for (const feature of features) {

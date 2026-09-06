@@ -50,6 +50,27 @@ describe("browser wrappers", () => {
     expect(mockFetch).toHaveBeenCalled();
   });
 
+  it("registers and mounts the experiment manager custom element", async () => {
+    const tags = defineCustomElements();
+    const element = document.createElement(tags["experiment-manager"]);
+
+    element.setAttribute("base-url", "https://test.com");
+    element.setAttribute("org-id", "org");
+    element.setAttribute("workspace", "ws");
+    act(() => {
+      document.body.appendChild(element);
+    });
+
+    await waitFor(() => {
+      expect(element.shadowRoot?.textContent).toContain("Experiments");
+      expect(element.shadowRoot?.textContent).toContain("No experiments created");
+    });
+
+    expect(
+      mockFetch.mock.calls.some(([url]) => String(url).includes("/experiments")),
+    ).toBe(true);
+  });
+
   it("waits for config before rendering a custom element", async () => {
     const tags = defineCustomElements();
     const element = document.createElement(tags.admin);

@@ -26,6 +26,7 @@ export default defineConfig({
         "config-manager": resolve(__dirname, "src/config-manager.ts"),
         "dimension-manager": resolve(__dirname, "src/dimension-manager.ts"),
         "override-manager": resolve(__dirname, "src/override-manager.ts"),
+        "experiment-manager": resolve(__dirname, "src/experiment-manager.ts"),
         "styles-entry": resolve(__dirname, "src/styles-entry.ts"),
       },
       name: "SuperpositionAdminUI",

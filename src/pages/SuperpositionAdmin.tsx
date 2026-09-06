@@ -13,6 +13,7 @@ import { AuditTrail } from "./AuditTrail";
 import { ConfigManager } from "./ConfigManager";
 import { DimensionManager } from "./DimensionManager";
 import { getMessage, isFeatureEditable } from "./FeatureGate";
+import { ExperimentManager } from "./ExperimentManager";
 import { OverrideManager } from "./OverrideManager";
 
 type Tab = SuperpositionFeature;
@@ -27,6 +28,7 @@ const tabComponents: Record<Tab, React.FC> = {
   overrides: OverrideManager,
   dimensions: DimensionManager,
   audit: AuditTrail,
+  experiments: ExperimentManager,
 };
 
 export interface SuperpositionAdminProps {
