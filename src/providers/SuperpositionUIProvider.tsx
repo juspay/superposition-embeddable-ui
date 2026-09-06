@@ -18,9 +18,11 @@ import { auditLogsApi } from "../api/audit-logs";
 import { SuperpositionClient } from "../api/client";
 import { defaultConfigsApi } from "../api/default-configs";
 import { dimensionsApi } from "../api/dimensions";
+import { experimentsApi } from "../api/experiments";
 import { overridesApi } from "../api/overrides";
 import { resolveApi } from "../api/resolve";
 import "../blend-react-compat";
+import { workspacesApi } from "../api/workspaces";
 import type {
   JsonValue,
   SuperpositionEmbeddableConfig,
@@ -70,9 +72,11 @@ export interface SuperpositionContextValue {
   client: SuperpositionClient;
   auditLogs: ReturnType<typeof auditLogsApi>;
   dimensions: ReturnType<typeof dimensionsApi>;
+  experiments: ReturnType<typeof experimentsApi>;
   defaultConfigs: ReturnType<typeof defaultConfigsApi>;
   overrides: ReturnType<typeof overridesApi>;
   resolve: ReturnType<typeof resolveApi>;
+  workspaces: ReturnType<typeof workspacesApi>;
   scope: SuperpositionScopeState;
 }
 
@@ -233,6 +237,8 @@ function buildThemeVars(
   const typographyLineHeight = (
     typography as { lineHeight?: string | number } | undefined
   )?.lineHeight;
+  const experimentMetrics = tokens?.experimentMetrics;
+  const experimentComparison = tokens?.experimentComparison;
 
   return {
     "--sp-color-bg":
@@ -291,6 +297,37 @@ function buildThemeVars(
     "--sp-table-opacity": table?.opacity ?? "1",
     "--sp-compact-control-padding":
       layout?.compactControlPadding ?? "calc(var(--sp-space-xs) / 2) var(--sp-space-xs)",
+    "--sp-experiment-wizard-max-width": layout?.experimentWizardMaxWidth ?? "960px",
+    "--sp-experiment-metrics-bg": experimentMetrics?.bgColor ?? "var(--sp-color-panel)",
+    "--sp-experiment-metrics-border":
+      experimentMetrics?.borderColor ?? "var(--sp-color-border)",
+    "--sp-experiment-metrics-radius":
+      experimentMetrics?.borderRadius ?? "var(--sp-radius-sm)",
+    "--sp-experiment-metrics-padding": experimentMetrics?.padding ?? "var(--sp-space-lg)",
+    "--sp-experiment-metrics-gap": experimentMetrics?.gap ?? "var(--sp-space-lg)",
+    "--sp-experiment-metrics-label-width": experimentMetrics?.labelColumnWidth ?? "280px",
+    "--sp-experiment-metrics-control-width":
+      experimentMetrics?.controlMaxWidth ?? "720px",
+    "--sp-experiment-metrics-helper":
+      experimentMetrics?.helperTextColor ?? "var(--sp-color-muted)",
+    "--sp-experiment-comparison-bg":
+      experimentComparison?.bgColor ?? "var(--sp-color-surface-muted)",
+    "--sp-experiment-comparison-border":
+      experimentComparison?.borderColor ?? "var(--sp-color-border)",
+    "--sp-experiment-comparison-radius":
+      experimentComparison?.borderRadius ?? "var(--sp-radius-sm)",
+    "--sp-experiment-comparison-padding":
+      experimentComparison?.padding ?? "var(--sp-space-lg)",
+    "--sp-experiment-comparison-device-width": experimentComparison?.width ?? "390px",
+    "--sp-experiment-comparison-device-height": experimentComparison?.height ?? "740px",
+    "--sp-experiment-comparison-device-radius":
+      experimentComparison?.deviceBorderRadius ??
+      experimentComparison?.borderRadius ??
+      "var(--sp-radius-sm)",
+    "--sp-experiment-comparison-shadow":
+      experimentComparison?.deviceShadow ??
+      experimentComparison?.shadow ??
+      "var(--sp-shadow-sm)",
     "--sp-color-surface-muted":
       colors?.surfaceMuted ??
       "color-mix(in oklab, var(--sp-color-panel) 88%, var(--sp-color-bg))",
@@ -352,6 +389,7 @@ function buildThemeVars(
       button?.borderColor ??
       "color-mix(in oklab, var(--sp-color-danger) 28%, var(--sp-color-border))",
     "--sp-button-disabled-opacity": button?.disabledOpacity ?? "0.56",
+    "--sp-button-height": button?.height ?? "40px",
     "--sp-button-padding":
       button?.padding ?? `${foundationUnit[8]} ${foundationUnit[12]}`,
     "--sp-button-radius": button?.borderRadius ?? "var(--sp-control-radius)",
@@ -367,7 +405,7 @@ function buildThemeVars(
     "--sp-form-label-color":
       formLabel?.textColor ?? form?.textColor ?? "var(--sp-color-text)",
     "--sp-form-label-font-size": formLabel?.fontSize ?? form?.fontSize ?? "0.9rem",
-    "--sp-form-label-font-weight": formLabel?.fontWeight ?? form?.fontWeight ?? "700",
+    "--sp-form-label-font-weight": formLabel?.fontWeight ?? form?.fontWeight ?? "500",
     "--sp-form-helper-color": form?.helperTextColor ?? "var(--sp-color-muted)",
     "--sp-form-remove-button-bg":
       formRemoveButton?.bgColor ??
@@ -629,9 +667,11 @@ export function SuperpositionUIProvider({
       client,
       auditLogs: auditLogsApi(client),
       dimensions: dimensionsApi(client),
+      experiments: experimentsApi(client),
       defaultConfigs: defaultConfigsApi(client),
       overrides: overridesApi(client),
       resolve: resolveApi(client),
+      workspaces: workspacesApi(client),
       scope: {
         hostContext,
         boundaryContext: activeBoundaryContext,

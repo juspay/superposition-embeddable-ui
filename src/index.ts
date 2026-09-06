@@ -29,3 +29,5 @@ export type {
   ResolvedConfigExplanationTimelineItem,
   SuperpositionEmbeddableConfig,
 } from "./types";
+export { ExperimentManager } from "./pages/ExperimentManager";
+export type { ExperimentManagerProps } from "./pages/ExperimentManager";

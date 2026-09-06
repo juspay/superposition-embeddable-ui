@@ -7,6 +7,7 @@ Embeddable React admin UI for Superposition configuration management.
 - Package: `superposition-embeddable-ui`
 - React entry: `superposition-embeddable-ui`
 - Browser helpers: `superposition-embeddable-ui/browser`
+- Experiment React entry: `superposition-embeddable-ui/experiment-manager`
 - Stylesheet: `superposition-embeddable-ui/styles.css`
 - Split self-contained local assets:
   - `dist/vendor/react.production.min.js`
@@ -18,6 +19,7 @@ Embeddable React admin UI for Superposition configuration management.
   - `dist/superposition-config-manager.global.external.js`
   - `dist/superposition-override-manager.global.external.js`
   - `dist/superposition-dimension-manager.global.external.js`
+  - `dist/superposition-experiment-manager.global.external.js`
 
 ## Packaging this for another app
 
@@ -58,6 +60,11 @@ The host app only needs to provide a `config` object.
 - `filters.defaultConfigPrefix` (optional): restricts default config keys and override values.
 - `theme` (optional): color, typography, spacing, and radius overrides.
 - `layout` (optional): host-controlled shell, modal, and alert sizing.
+- `assets.emptyStateImageUrl` (optional): host-owned empty-state illustration.
+- `experimentManager.showMetricsForm` (optional, default `true`): show the metrics form regardless of `workspace.metrics.enabled`. Choices come from `workspace.metrics.definitions`, where each metric has a `name` and a `direction` of `"maximize"` or `"minimize"` (for example, `{ "name": "conversion_rate", "direction": "maximize" }`); missing choices keep the form visible and prevent submission until valid metrics are selected. Set to `false` to skip the metrics step and send `metrics: { enabled: false }`, overriding workspace defaults. When shown, create requests send `metrics.enabled: true` with primary, secondary, guardrail, and hypothesis selections.
+- `experimentManager.disableGuardrailMetric` (optional, default `false`): set to `true` to hide guardrail selection and use the first entry in `workspace.metrics.definitions` as the required guardrail. Guardrail details are also hidden from the launch summary and review dialog. An empty list prevents submission; primary metric selection remains required.
+- `experimentManager.variantFields` (optional): host-defined controls mapped into variant overrides.
+- `experimentManager.comparisonUrls` (optional): every iframe URL available to a host comparison view.
 - `ui` (optional): host-owned notifications, confirmation, layering, and boundary-filter controls.
 - `ui.featureControls` (optional): host-owned UI toggles for edit controls and row-click detail pages.
 - `messages` (optional): host overrides for visible SDK copy.
@@ -69,6 +76,7 @@ The embeddable UI currently uses its own fetch-based REST client. It does not ca
   "apiBaseUrl": "/api",
   "orgId": "localorg",
   "workspace": "production",
+  "assets": { "emptyStateImageUrl": "/images/no-data.png" },
   "scope": {
     "context": {
       "region": "us-east-1",
@@ -77,12 +85,13 @@ The embeddable UI currently uses its own fetch-based REST client. It does not ca
     "locked": true,
     "strict": true
   },
-  "features": ["config", "dimensions", "overrides"],
+  "features": ["config", "dimensions", "overrides", "experiments"],
   "readOnly": false,
   "capabilities": {
     "config": { "create": false, "delete": false },
     "dimensions": { "create": false, "delete": false },
-    "overrides": { "create": true, "update": true }
+    "overrides": { "create": true, "update": true },
+    "experiments": { "create": true, "execute": true, "ramp": true }
   },
   "filters": {
     "defaultConfigPrefix": "checkout.",
@@ -550,6 +559,14 @@ Supported tags include:
 - `superposition-config-manager`
 - `superposition-override-manager`
 - `superposition-dimension-manager`
+- `superposition-experiment-manager`
+
+The experiment manager supports A/B experiment creation, details, name search,
+status filtering, pagination, traffic ramping, pause/resume, conclusion, and discard.
+Experiment mutations require explicit `capabilities.experiments` permissions:
+`create` enables creation, `ramp` enables traffic changes, and `execute` enables
+pause/resume, conclusion, and discard. Omitted permissions default to `false`;
+`readOnly: true` disables all mutations.
 
 ## Lighter externalized global
 

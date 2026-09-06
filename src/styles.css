@@ -44,6 +44,26 @@
   letter-spacing: 0;
 }
 
+.sp-experiment-template-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.sp-experiment-template-card:not(:disabled):hover {
+  border-color: var(--sp-color-primary) !important;
+}
+
+@media (min-width: 720px) {
+  .sp-experiment-template-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1120px) {
+  .sp-experiment-template-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 .sp-ui :where(button, input, textarea, select) {
   font: inherit;
 }
@@ -1384,6 +1404,11 @@
 .sp-ui .sp-search-field [role="searchbox"]::placeholder {
   color: var(--sp-search-placeholder);
   opacity: var(--sp-search-placeholder-opacity);
+}
+
+.sp-ui :where(input, textarea)::placeholder {
+  color: var(--sp-color-muted);
+  opacity: 1;
 }
 
 .sp-ui :where(a) {

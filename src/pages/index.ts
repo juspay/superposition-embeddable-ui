@@ -18,6 +18,8 @@ export {
   DimensionManager as DimensionsManager,
 } from "./DimensionManager";
 export type { DimensionManagerProps } from "./DimensionManager";
+export { ExperimentManager } from "./ExperimentManager";
+export type { ExperimentManagerProps } from "./ExperimentManager";
 export { OverrideManager, OverrideManager as OverridesManager } from "./OverrideManager";
 export type { OverrideManagerProps } from "./OverrideManager";
 export { SuperpositionAdmin } from "./SuperpositionAdmin";

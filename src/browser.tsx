@@ -37,6 +37,12 @@ const featureComponents: Record<FeatureName, LazyFeature> = {
       default: mod.DimensionManager as React.ComponentType<FeatureComponentProps>,
     };
   }),
+  "experiment-manager": React.lazy(async () => {
+    const mod = await import("./pages/ExperimentManager");
+    return {
+      default: mod.ExperimentManager as React.ComponentType<FeatureComponentProps>,
+    };
+  }),
   "audit-trail": React.lazy(async () => {
     const mod = await import("./pages/AuditTrail");
     return { default: mod.AuditTrail as React.ComponentType<FeatureComponentProps> };
