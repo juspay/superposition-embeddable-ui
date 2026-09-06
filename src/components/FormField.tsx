@@ -127,13 +127,20 @@ export function FormField({
 
 // ── Reusable input styles ──────────────────────────────────────────
 
+// The --sp-color-* tokens these derive from are unset unless the host passes theme colours
+// (see SuperpositionUIProvider's deepMerge), and an unresolved var() invalidates the whole
+// declaration - which leaves controls with no border at all. The neutral fallbacks keep
+// them visible on light and dark surfaces alike and are inert once tokens resolve.
 export const inputStyle: React.CSSProperties = {
   width: "100%",
   padding: "8px 12px",
-  border: "1.5px solid var(--sp-control-border)",
-  background: "var(--sp-control-bg)",
-  color: "var(--sp-control-text)",
+  border: "1.5px solid var(--sp-control-border, rgba(128, 128, 128, 0.45))",
+  background: "var(--sp-control-bg, transparent)",
+  color: "var(--sp-control-text, inherit)",
   borderRadius: "var(--sp-control-radius)",
+  // textarea defaults to monospace in every browser; inherit keeps raw controls on the
+  // host's font, and the JSON editors set monospace explicitly where they want it.
+  fontFamily: "inherit",
   fontSize: "1rem",
   outline: "none",
   boxSizing: "border-box",

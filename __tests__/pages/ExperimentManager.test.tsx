@@ -376,11 +376,19 @@ describe("ExperimentManager", () => {
       expect(trafficSlider).toHaveAttribute("min", "1");
       expect(trafficSlider).toHaveAttribute("max", "50");
       fireEvent.change(trafficSlider, { target: { value: "30" } });
-      expect(screen.getByText("Control: 70% / Variant B: 30%")).toBeDefined();
-      fireEvent.click(screen.getByRole("radio", { name: /Even split/i }));
-      fireEvent.click(screen.getByRole("button", { name: "Review & Launch" }));
+      // traffic_percentage applies to each variant, so both arms read the same share and
+      // the untouched remainder is spelled out rather than handed to control.
       expect(
+        screen.getByText("Control 30% · Variant B 30% — 40% unaffected"),
+      ).toBeDefined();
+      expect(screen.queryByText(/Control: 70%/)).toBeNull();
+      expect(screen.queryByRole("radio", { name: /Favor Control/i })).toBeNull();
+      fireEvent.click(screen.getByRole("button", { name: "Review & Launch" }));
+      const reviewDialog = within(
         await screen.findByRole("dialog", { name: "Review your experiment" }),
+      );
+      expect(
+        reviewDialog.getByText("Control 30% · Variant B 30% — 40% unaffected"),
       ).toBeDefined();
       fireEvent.click(screen.getByRole("button", { name: "Launch" }));
 
@@ -475,7 +483,7 @@ describe("ExperimentManager", () => {
   );
 
   it.each([false, true])(
-    "creates without a hypothesis with disableGuardrailMetric=%s",
+    "blocks the metrics path until a hypothesis is written, disableGuardrailMetric=%s",
     async (disableGuardrailMetric) => {
       renderManager({
         disableGuardrailMetric,
@@ -492,12 +500,22 @@ describe("ExperimentManager", () => {
         expect(screen.queryByText("Guardrail Metric")).toBeNull();
         expect(screen.getByRole("radio", { name: /Conversion Rate/i })).toBeChecked();
         fireEvent.click(screen.getByRole("radio", { name: /Latency P95/i }));
-        expect(screen.getByRole("button", { name: "Next →" })).not.toBeDisabled();
       } else {
         expect(screen.getByRole("button", { name: "Next →" })).toBeDisabled();
         fireEvent.click(screen.getByRole("button", { name: "Guardrail metric" }));
         fireEvent.click(screen.getByRole("option", { name: "Latency P95" }));
       }
+
+      // Metrics are settled, so an empty hypothesis is the only thing still holding the
+      // step shut - it becomes the experiment's description and change reason.
+      expect(screen.getByRole("button", { name: "Next →" })).toBeDisabled();
+      fireEvent.change(screen.getByLabelText("Hypothesis"), { target: { value: "   " } });
+      expect(screen.getByRole("button", { name: "Next →" })).toBeDisabled();
+      fireEvent.change(screen.getByLabelText("Hypothesis"), {
+        target: { value: "Faster checkout lifts conversion" },
+      });
+      expect(screen.getByRole("button", { name: "Next →" })).not.toBeDisabled();
+
       fireEvent.click(screen.getByRole("button", { name: "Next →" }));
       fireEvent.click(screen.getByRole("button", { name: "Review & Launch" }));
       const review = within(
@@ -516,8 +534,8 @@ describe("ExperimentManager", () => {
           ([, init]) => init.method === "POST",
         );
         expect(JSON.parse(createCall?.[1].body)).toMatchObject({
-          description: "Description not provided",
-          change_reason: "Change Reason not provided",
+          description: "Faster checkout lifts conversion",
+          change_reason: "Faster checkout lifts conversion",
           metrics: {
             enabled: true,
             selection: {
@@ -527,7 +545,7 @@ describe("ExperimentManager", () => {
               guardrail: disableGuardrailMetric
                 ? workspace.metrics.definitions[0].name
                 : "latency_p95",
-              hypothesis: null,
+              hypothesis: "Faster checkout lifts conversion",
             },
           },
         });
@@ -536,12 +554,105 @@ describe("ExperimentManager", () => {
             ([url, init]) =>
               url === "/api/experiments/checkout-copy/ramp" &&
               init.method === "PATCH" &&
-              JSON.parse(init.body).change_reason === "Change Reason not provided",
+              JSON.parse(init.body).change_reason === "Faster checkout lifts conversion",
           ),
         ).toBe(true);
       });
+
+      // The old "Description not provided" / "Change Reason not provided" placeholders are
+      // gone from the code, and no request can carry them any more.
+      const sentBodies = mockFetch.mock.calls
+        .map(([, init]) => (init?.body ? String(init.body) : ""))
+        .join(" ");
+      expect(sentBodies).not.toMatch(/not provided/i);
     },
   );
+
+  describe("wizard layout", () => {
+    const openWizard = async () => {
+      renderManager();
+      await screen.findByText("Checkout copy");
+      fireEvent.click(screen.getByRole("button", { name: /Create Experiment/i }));
+    };
+
+    it("renders the colour picker as a swatch with the native input laid over it", async () => {
+      await openWizard();
+
+      const picker = screen.getByLabelText("Top bar background color color picker");
+      const swatch = picker.parentElement as HTMLElement;
+
+      // Chrome ignores width/height on a bare input[type=color], so the visible swatch is
+      // the span and the input is a transparent hit target on top of it.
+      expect(picker.style.opacity).toBe("0");
+      expect(picker.style.position).toBe("absolute");
+      expect(picker.style.width).toBe("100%");
+      expect(swatch.style.background).toBe("rgb(255, 255, 255)");
+      expect(swatch.style.width).toBe("20px");
+      expect(swatch.style.height).toBe("20px");
+    });
+
+    it("puts the Name label beside its control like every other wizard row", async () => {
+      await openWizard();
+
+      const nameInput = screen.getByLabelText("Name");
+      const row = nameInput.parentElement?.parentElement as HTMLElement;
+
+      expect(row.style.display).toBe("grid");
+      expect(row.style.gridTemplateColumns).toContain("minmax(160px");
+      expect(row.firstElementChild?.textContent).toBe("Name*");
+      // The stacked Blend label the field used to render is gone.
+      expect(
+        Array.from(document.querySelectorAll("label")).some(
+          (label) => label.textContent?.trim() === "Name",
+        ),
+      ).toBe(false);
+    });
+
+    it("sizes the hypothesis textarea from inputStyle instead of Blend's defaults", async () => {
+      await openWizard();
+      fireEvent.change(screen.getByLabelText("Name"), {
+        target: { value: "Payment button test" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Next →" }));
+
+      const hypothesis = screen.getByLabelText("Hypothesis");
+
+      // Blend's TextArea omits style/className from its props, so routing this through
+      // FormField dropped both the width and the min-height.
+      expect(hypothesis.tagName).toBe("TEXTAREA");
+      expect(hypothesis.style.width).toBe("100%");
+      expect(hypothesis.style.minHeight).toBe("120px");
+      expect(hypothesis.style.boxSizing).toBe("border-box");
+      // The panel title carries the required marker, the way FormField marks Name.
+      expect(
+        screen.getAllByText("Hypothesis").some((el) => el.textContent === "Hypothesis*"),
+      ).toBe(true);
+    });
+
+    it("keeps the review badge inside its card", async () => {
+      await openWizard();
+      fireEvent.change(screen.getByLabelText("Name"), {
+        target: { value: "Payment button test" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Next →" }));
+      fireEvent.click(screen.getByRole("button", { name: "Guardrail metric" }));
+      fireEvent.click(screen.getByRole("option", { name: "Conversion Rate" }));
+      fireEvent.change(screen.getByLabelText("Hypothesis"), {
+        target: { value: "Faster checkout lifts conversion" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Next →" }));
+      fireEvent.click(screen.getByRole("button", { name: "Review & Launch" }));
+
+      const review = within(
+        screen.getByRole("dialog", { name: "Review your experiment" }),
+      );
+      const badge = review.getByText("Current live configuration");
+
+      expect(badge.style.maxWidth).toBe("100%");
+      expect(badge.style.overflowWrap).toBe("anywhere");
+      expect(badge.style.whiteSpace).not.toBe("nowrap");
+    });
+  });
 
   it("opens the single-page detail on Results and exposes valid lifecycle actions", async () => {
     renderManager();
