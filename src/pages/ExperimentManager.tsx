@@ -271,13 +271,68 @@ const optionStyle = (selected: boolean): React.CSSProperties => ({
   cursor: "pointer",
 });
 
+function RequiredMarker() {
+  return (
+    <span
+      aria-hidden="true"
+      style={{ color: "var(--sp-feedback-danger-text, #d92d20)", marginLeft: 2 }}
+    >
+      *
+    </span>
+  );
+}
+
+// Step 1's details fields used FormField, which stacks its label above the control while
+// every other row in the wizard (MetricPanel, VariantFieldRow) puts the label in a left
+// column. This is that same two-column shape.
+function WizardFieldRow({
+  label,
+  required,
+  error,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  error?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns:
+          "minmax(160px, var(--sp-experiment-metrics-label-width)) minmax(0, 1fr)",
+        gap: "var(--sp-space-md)",
+        alignItems: "start",
+      }}
+    >
+      <span style={{ fontSize: 14, fontWeight: 500, paddingTop: 9 }}>
+        {label}
+        {required ? <RequiredMarker /> : null}
+      </span>
+      <div style={{ display: "grid", gap: 4, minWidth: 0 }}>
+        {children}
+        {error ? (
+          <span
+            style={{ color: "var(--sp-feedback-danger-text, #d92d20)", fontSize: 12 }}
+          >
+            {error}
+          </span>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 function MetricPanel({
   title,
   description,
+  required,
   children,
 }: {
   title: string;
   description: string;
+  required?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -296,6 +351,7 @@ function MetricPanel({
       <div style={{ display: "grid", alignContent: "start", gap: 4 }}>
         <span style={{ fontSize: 14, fontWeight: 500, color: "var(--sp-color-text)" }}>
           {title}
+          {required ? <RequiredMarker /> : null}
         </span>
         <span
           style={{
@@ -316,6 +372,14 @@ function MetricPanel({
       </div>
     </section>
   );
+}
+
+// Superposition applies traffic_percentage to EACH variant, so control and treatment always
+// carry the same share and 2 x t of traffic enters the experiment at all. Anything phrased as
+// "control gets the rest" misreads the API.
+function describeTrafficSplit(trafficPerVariant: number) {
+  const unaffected = Math.max(0, 100 - trafficPerVariant * 2);
+  return `Control ${trafficPerVariant}% · Variant B ${trafficPerVariant}% — ${unaffected}% unaffected`;
 }
 
 function StatusBadge({
@@ -575,6 +639,7 @@ function VariantFieldRow({
   onChange?: (value: string) => void;
 }) {
   const color = /^#[0-9a-f]{6}$/i.test(value) ? value : "#000000";
+  const [pickerFocused, setPickerFocused] = useState(false);
   return (
     <div
       style={{
@@ -594,7 +659,7 @@ function VariantFieldRow({
                 width: 18,
                 height: 18,
                 borderRadius: 4,
-                border: "1px solid var(--sp-color-border)",
+                border: "1px solid var(--sp-color-border, rgba(128, 128, 128, 0.45))",
                 background: color,
               }}
             />
@@ -608,18 +673,53 @@ function VariantFieldRow({
               alignItems: "center",
               gap: 10,
               padding: "0 var(--sp-space-sm)",
-              border: "1px solid var(--sp-control-border)",
+              border: "1px solid var(--sp-control-border, rgba(128, 128, 128, 0.45))",
               borderRadius: "var(--sp-control-radius)",
-              background: "var(--sp-control-bg)",
+              background: "var(--sp-control-bg, transparent)",
             }}
           >
-            <input
-              type="color"
-              aria-label={`${label} color picker`}
-              value={color}
-              onChange={(event) => onChange?.(event.target.value.toUpperCase())}
-              style={{ width: 20, height: 20, padding: 0, border: 0, background: "none" }}
-            />
+            {/* Chrome ignores width/height on an unstyled `input[type=color]` and keeps
+                its own swatch padding, which needs `appearance: none` plus
+                ::-webkit-color-swatch rules. Pseudo-elements cannot be reached from the
+                inline styles this file uses, and styles.css only ships with the custom
+                element (mount() hosts get no stylesheet), so the swatch is a plain span
+                and the native input sits transparently on top of it. */}
+            <span
+              style={{
+                position: "relative",
+                display: "inline-flex",
+                flex: "0 0 auto",
+                width: 20,
+                height: 20,
+                borderRadius: 4,
+                border: "1px solid var(--sp-color-border, rgba(128, 128, 128, 0.45))",
+                background: color,
+                overflow: "hidden",
+                boxShadow: pickerFocused
+                  ? "0 0 0 2px color-mix(in oklab, var(--sp-color-primary) 45%, transparent)"
+                  : undefined,
+              }}
+            >
+              <input
+                type="color"
+                aria-label={`${label} color picker`}
+                value={color}
+                onChange={(event) => onChange?.(event.target.value.toUpperCase())}
+                onFocus={() => setPickerFocused(true)}
+                onBlur={() => setPickerFocused(false)}
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  width: "100%",
+                  height: "100%",
+                  margin: 0,
+                  padding: 0,
+                  border: 0,
+                  opacity: 0,
+                  cursor: "pointer",
+                }}
+              />
+            </span>
             <input
               aria-label={label}
               value={value}
@@ -846,7 +946,7 @@ function ExperimentManagerContent({ pageSize = 20 }: ExperimentManagerProps) {
   const [guardrailMetric, setGuardrailMetric] = useState("");
   const [hypothesis, setHypothesis] = useState("");
   const [launchTraffic, setLaunchTraffic] = useState(50);
-  const [splitMode, setSplitMode] = useState<"even" | "favor-control" | "custom">("even");
+  const [splitMode, setSplitMode] = useState<"even" | "custom">("even");
   const [actionReason, setActionReason] = useState("");
   const [traffic, setTraffic] = useState(10);
   const [chosenVariant, setChosenVariant] = useState("");
@@ -1062,16 +1162,20 @@ function ExperimentManagerContent({ pageSize = 20 }: ExperimentManagerProps) {
       ? null
       : "Variant overrides must include at least one key.");
   const resolvedHypothesis = hypothesis.trim();
-  const resolvedDescription = metricsEnabled
-    ? resolvedHypothesis || "Description not provided"
-    : description.trim();
-  const resolvedChangeReason = metricsEnabled
-    ? resolvedHypothesis || "Change Reason not provided"
-    : reason.trim();
+  // On the metrics path the hypothesis is what the experiment record keeps as its
+  // description and change reason, so it has to be filled in. Step 2's Next gates on this
+  // and createDisabled repeats it, so neither field can reach the server empty. The
+  // "Description not provided" / "Change Reason not provided" placeholders this used to
+  // fall back to are gone: they only ever applied to the metrics branch, and the
+  // !metricsEnabled branch already requires description and reason below.
+  const hypothesisMissing = metricsEnabled && !resolvedHypothesis;
+  const resolvedDescription = metricsEnabled ? resolvedHypothesis : description.trim();
+  const resolvedChangeReason = metricsEnabled ? resolvedHypothesis : reason.trim();
   const createDisabled =
     createMutation.loading ||
     !name.trim() ||
     (!metricsEnabled && (!description.trim() || !reason.trim())) ||
+    hypothesisMissing ||
     !!parsedContext.error ||
     !!controlOverrideError ||
     !!treatmentOverrideError ||
@@ -2060,7 +2164,7 @@ function ExperimentManagerContent({ pageSize = 20 }: ExperimentManagerProps) {
     } as const;
     const nextDisabled =
       (createStep === 1 && (variantsIncomplete || detailsIncomplete)) ||
-      (createStep === 2 && metricSelectionIncomplete) ||
+      (createStep === 2 && (metricSelectionIncomplete || hypothesisMissing)) ||
       (createStep === 3 && !!launchTrafficError);
     const back = () => {
       if (createStep === 1 && experimentTemplates.length > 0) {
@@ -2291,46 +2395,60 @@ function ExperimentManagerContent({ pageSize = 20 }: ExperimentManagerProps) {
               }}
             >
               <strong>Experiment details</strong>
-              <FormField label="Name" required>
+              <WizardFieldRow label="Name" required>
                 <input
+                  aria-label="Name"
+                  required
                   style={inputStyle}
                   value={name}
                   onChange={(event) => setName(event.target.value)}
                   placeholder="Experiment name"
                 />
-              </FormField>
+              </WizardFieldRow>
               {!metricsEnabled ? (
                 <>
-                  <FormField label="Description" required>
+                  <WizardFieldRow label="Description" required>
                     <input
+                      aria-label="Description"
+                      required
                       style={inputStyle}
                       value={description}
                       onChange={(event) => setDescription(event.target.value)}
                       placeholder="What this experiment measures"
                     />
-                  </FormField>
-                  <FormField label="Change reason" required>
+                  </WizardFieldRow>
+                  <WizardFieldRow label="Change reason" required>
                     <input
+                      aria-label="Change reason"
+                      required
                       style={inputStyle}
                       value={reason}
                       onChange={(event) => setReason(event.target.value)}
                       placeholder="Why this experiment is being created"
                     />
-                  </FormField>
+                  </WizardFieldRow>
                 </>
               ) : null}
               {!contextIsHostManaged ? (
-                <FormField
+                <WizardFieldRow
                   label="Audience context (JSON)"
                   required
                   error={parsedContext.error ?? undefined}
                 >
                   <textarea
-                    style={{ ...inputStyle, minHeight: 88, fontFamily: "monospace" }}
+                    aria-label="Audience context (JSON)"
+                    required
+                    aria-invalid={parsedContext.error ? true : undefined}
+                    style={{
+                      ...inputStyle,
+                      minHeight: 88,
+                      fontFamily: "monospace",
+                      resize: "vertical",
+                    }}
                     value={contextJson}
                     onChange={(event) => setContextJson(event.target.value)}
                   />
-                </FormField>
+                </WizardFieldRow>
               ) : null}
             </div>
             <div
@@ -2612,15 +2730,20 @@ function ExperimentManagerContent({ pageSize = 20 }: ExperimentManagerProps) {
             <MetricPanel
               title="Hypothesis"
               description="Capture your reasoning before you run the experiment."
+              required
             >
-              <FormField label="Hypothesis">
-                <textarea
-                  style={{ ...inputStyle, minHeight: 120 }}
-                  value={hypothesis}
-                  onChange={(event) => setHypothesis(event.target.value)}
-                  placeholder="Enter your hypothesis"
-                />
-              </FormField>
+              {/* Not a FormField: that swaps the textarea for Blend's TextArea, whose props
+                  omit `style`/`className`, so `inputStyle` and minHeight were dropped and the
+                  control sized itself (overflowing its own wrapper by its padding). It also
+                  repeated the panel's "Hypothesis" title above the box. */}
+              <textarea
+                aria-label="Hypothesis"
+                required
+                style={{ ...inputStyle, minHeight: 120, resize: "vertical" }}
+                value={hypothesis}
+                onChange={(event) => setHypothesis(event.target.value)}
+                placeholder="Enter your hypothesis"
+              />
             </MetricPanel>
           </div>
         ) : null}
@@ -2651,12 +2774,6 @@ function ExperimentManagerContent({ pageSize = 20 }: ExperimentManagerProps) {
                       label: "Even split (50/50)",
                       hint: "Recommended for most experiments",
                       traffic: 50,
-                    },
-                    {
-                      mode: "favor-control",
-                      label: "Favor Control (70/30)",
-                      hint: "Keep more traffic on your current setup",
-                      traffic: 30,
                     },
                     {
                       mode: "custom",
@@ -2698,7 +2815,7 @@ function ExperimentManagerContent({ pageSize = 20 }: ExperimentManagerProps) {
                 {splitMode === "custom" ? (
                   <div style={{ display: "grid", gap: 8, paddingLeft: 26 }}>
                     <span style={{ fontSize: 14 }}>
-                      Control: {100 - launchTraffic}% / Variant B: {launchTraffic}%
+                      {describeTrafficSplit(launchTraffic)}
                     </span>
                     {/* Capped at 50: Superposition applies traffic_percentage to EACH
                         variant, so anything above 50 would over-subscribe the split. */}
@@ -2777,7 +2894,7 @@ function ExperimentManagerContent({ pageSize = 20 }: ExperimentManagerProps) {
                 <div>
                   <strong style={reviewLabelStyle}>Traffic Split</strong>
                   <div style={reviewValueStyle}>
-                    Control: {100 - launchTraffic}% | Variant: {launchTraffic}%
+                    {describeTrafficSplit(launchTraffic)}
                   </div>
                 </div>
               </div>
@@ -2802,8 +2919,9 @@ function ExperimentManagerContent({ pageSize = 20 }: ExperimentManagerProps) {
                     <span
                       style={{
                         alignSelf: "flex-start",
+                        maxWidth: "100%",
                         padding: "5px 12px",
-                        whiteSpace: "nowrap",
+                        overflowWrap: "anywhere",
                         borderRadius: "var(--sp-pill-radius)",
                         color: variant.control
                           ? "var(--sp-feedback-info-text)"
