@@ -1,6 +1,7 @@
 import react from "@vitejs/plugin-react";
 import { resolve } from "path";
 import { defineConfig } from "vite";
+import { cdnExternalGlobals, cdnExternalIds, cdnJsxRuntimeAlias } from "./vite.external";
 
 const featureGlobals = {
   admin: {
@@ -49,6 +50,9 @@ const feature = featureGlobals[selectedFeature];
 
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: cdnJsxRuntimeAlias(__dirname),
+  },
   build: {
     emptyOutDir: false,
     cssCodeSplit: false,
@@ -59,13 +63,9 @@ export default defineConfig({
       fileName: () => feature.fileName,
     },
     rollupOptions: {
-      external: ["react", "react-dom", "react-dom/client"],
+      external: [...cdnExternalIds],
       output: {
-        globals: {
-          react: "React",
-          "react-dom": "ReactDOM",
-          "react-dom/client": "ReactDOM",
-        },
+        globals: { ...cdnExternalGlobals },
       },
     },
   },
