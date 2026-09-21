@@ -1258,6 +1258,7 @@ function OverrideManagerContent({
       currentPageSize,
       scopedContext,
     ],
+    "Could not load overrides. Please try again in a moment.",
   );
 
   const { data: defaultConfigsData } = useApi(

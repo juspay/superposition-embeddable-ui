@@ -254,6 +254,7 @@ function ConfigManagerContent({
         ? resolve.resolveDetailed(resolvedContext, { prefix: prefixes })
         : defaultConfigs.list({ all: true }, { prefix: prefixes }),
     [defaultConfigs, prefixes, resolve, showResolvedValues, resolvedContextKey],
+    "Could not load configs. Please try again in a moment.",
   );
 
   // Create form state
