@@ -2,6 +2,10 @@
 
 This package is distributed through this repository's GitHub Releases.
 
+## 0.1.9
+
+- Contained untrusted proxy and CDN error bodies. The embed now shows a safe operation-specific message for HTML or malformed responses, while retaining concise structured API validation messages.
+
 ## 0.1.8
 
 - Fixed the experiment wizard's colour picker: Chrome ignored the size set on the bare `input[type=color]`, so it rendered as a tall thin box. The swatch is now a styled element with the native input transparent on top of it.

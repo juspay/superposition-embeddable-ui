@@ -40,6 +40,14 @@ npm run build
 npm pack
 ```
 
+After the release-preparation commit is merged to `main`, this command runs the
+checks, builds the package, creates a temporary tarball, tags `main`, and
+uploads the tarball to a GitHub Release:
+
+```bash
+npm run release -- 0.1.9
+```
+
 That produces a tarball your friend can install with:
 
 ```bash
