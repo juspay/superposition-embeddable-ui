@@ -32,20 +32,13 @@ function parseBackendMessage(text: string): string | undefined {
   try {
     return extractBackendMessage(JSON.parse(trimmed));
   } catch {
-    const jsonStart = trimmed.indexOf("{");
-    if (jsonStart < 0) return undefined;
-
-    try {
-      return extractBackendMessage(JSON.parse(trimmed.slice(jsonStart)));
-    } catch {
-      return undefined;
-    }
+    return undefined;
   }
 }
 
 function getDisplayMessage(error: unknown): string | undefined {
   if (error instanceof SuperpositionApiError) {
-    return parseBackendMessage(error.body) ?? normalizeMessage(error.body);
+    return parseBackendMessage(error.body);
   }
 
   const structuredMessage = extractBackendMessage(error);

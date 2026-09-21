@@ -17,6 +17,7 @@ export interface UseApiResult<T> extends UseApiState<T> {
 export function useApi<T>(
   fetcher: () => Promise<T>,
   deps: unknown[] = [],
+  fallbackErrorMessage?: string,
 ): UseApiResult<T> {
   const [state, setState] = useState<UseApiState<T>>({
     data: null,
@@ -36,7 +37,7 @@ export function useApi<T>(
         setState({
           data: null,
           loading: false,
-          error: formatErrorMessage(err),
+          error: formatErrorMessage(err, fallbackErrorMessage),
         }),
       );
   }, []);
